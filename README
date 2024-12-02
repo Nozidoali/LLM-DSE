@@ -7,7 +7,7 @@ To reproduce the code, you need to pull and run the docker from VAST DSE-for-HLS
 Apptainer> source run.sh
 ```
 
-Getting started:
+Getting started: before running the script, you need to put the OPENAI API key in the `.env` file.
 ```bash
 pip install -r requirements.txt
 python llm.py
