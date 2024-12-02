@@ -1,0 +1,16 @@
+This is the final project for CS259 at UCLA
+
+To reproduce the code, you need to pull and run the docker from VAST DSE-for-HLS.
+`https://github.com/UCLA-VAST/DSE-for-HLS/tree/main/example`
+```bash
+./merlin.sh
+Apptainer> source run.sh
+```
+
+Getting started:
+```bash
+pip install -r requirements.txt
+python llm.py
+```
+
+Trouble shooting:
