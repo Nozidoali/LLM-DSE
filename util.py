@@ -12,13 +12,15 @@ def get_default_design(ds_config_file: str) -> dict:
 def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int) -> str:
     curr_dir = os.path.join(work_dir, f"{idx}/")
     curr_src_dir = os.path.join(curr_dir, "src/")
-    [os.mkdir(d) for d in [work_dir, curr_dir, curr_src_dir] if not os.path.exists(d)]
+    mcc_common_dir = os.path.join(work_dir, "mcc_common/")
+    [os.mkdir(d) for d in [work_dir, curr_dir, curr_src_dir, mcc_common_dir] if not os.path.exists(d)]
     c_path = os.path.join(curr_src_dir, f"{KERNEL_NAME}.c")
     curr_code: str = c_code
     for key, value in curr_design.items():
         curr_code = curr_code.replace("auto{" + key + "}", str(value))
     open(c_path, 'w').write(curr_code)
     open(curr_dir + "Makefile", 'w').write(MAKEFILE_STR)
+    open(mcc_common_dir + "mcc_common.mk", 'w').write(MCC_COMMON_STR)
     return curr_dir
 
 def run_merlin_compile(make_dir: str) -> None:
@@ -41,6 +43,7 @@ def get_openai_response(prompt, model="gpt-4o"):
 def retrieve_design_from_response(response: str) -> dict:
     try:
         _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
+        print(f"INFO: response received {_response}")
         matches = re.findall(r'\{(.*?)\}', _response)
         design = json.loads("{"+matches[0]+"}")
         return design
