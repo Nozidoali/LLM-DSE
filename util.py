@@ -3,6 +3,7 @@ import json
 import re
 import subprocess
 import openai
+import traceback
 from config import *
 
 def get_default_design(ds_config_file: str) -> dict:
@@ -45,10 +46,12 @@ def retrieve_design_from_response(response: str) -> dict:
         _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
         print(f"INFO: response received {_response}")
         matches = re.findall(r'\{(.*?)\}', _response)
+        print(f"INFO: matches {matches}")
         design = json.loads("{"+matches[0]+"}")
         return design
-    except:
+    except Exception as e:
         print(f"WARNING: invalid response received {response}")
+        traceback.print_exc()
         return None
 
 def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, info_keys = [
@@ -57,7 +60,8 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
     "OBJECTIVES",
     "PRAGMA_KNOWLEDGE",
     "TARGET_PERFORMANCE", 
-    "WARNING_GUIDELINE"
+    "WARNING_GUIDELINE",
+    "OUTPUT_REGULATION"
 ]) -> str:
     prompt_lines = []
     pragma_names = get_default_design(config_file).keys()
@@ -110,6 +114,10 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
             prompt_lines += [
                 "When you receive the WARNING include tiling factor >= loop tripcount, please decrease the corresponding TILE FACTOR.",
             ]
+        elif key == "OUTPUT_REGULATION":
+            prompt_lines += [
+                "Please output the new pragma design as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}"
+            ]
         else:
             raise ValueError(f"Invalid key {key}")
     return "\n".join(prompt_lines)
@@ -123,8 +131,9 @@ def extract_perf(input_file):
         util_keys = ['cycles', 'lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']
         return [f"{util_keys[i]} = {util_values[i]}" for i in range(6)]
     except:
-        print(f"Error: cannot extract performance data from {input_file}")
-        return [f"Error: cannot extract performance data from {input_file}"]
+        print(f"WARNING: cannot extract performance data from {input_file}")
+        return [f"WARNING: cannot extract performance data from {input_file}"]
 
 def extract_warning(input_file):
+    if not os.path.exists(input_file): return ["No warning found in the log file"]
     return [l for l in open(input_file, "r").readlines() if "WARNING" in l]

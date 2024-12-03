@@ -1,3 +1,9 @@
+import os
+import dotenv
+
+# Load environment variables
+dotenv.load_dotenv()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Control factors
 DEBUG: bool = False
