@@ -7,12 +7,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Control factors
 DEBUG: bool = False
-C_CODE_FILE: str = "./data/gemm-p.c"
-CONFIG_FILE: str = "./data/gemm-p_ds_config.json"
+C_CODE_FILE: str = "./data/new5.c"
+CONFIG_FILE: str = "./data/new5.json"
+PICKLE_FILE: str = "./data/new5.pickle"
 WORK_DIR: str = "./work"
 
 # DSE
-MAX_ITER = 5
+INIT_ITER = 5
+MAX_ITER = 10
 
 # Prompts
 

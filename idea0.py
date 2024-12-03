@@ -8,13 +8,13 @@ def llm_dse(c_code, config_file):
     for i_steps in range(MAX_ITER):
         prompt_str = ""
         print("-"*80 + f"\nStarting iteration {i_steps}")
+        designs.append(curr_design)
         curr_dir = apply_design_to_code(WORK_DIR, c_code, curr_design, i_steps)
         prompt_str = compile_prompt(WORK_DIR, c_code, CONFIG_FILE, designs)
+        run_merlin_compile(curr_dir)
         response = get_openai_response(prompt_str)
         curr_design = retrieve_design_from_response(response)
         assert isinstance(curr_design, dict), f"expecting dict, got {type(curr_design)}"
-        run_merlin_compile(curr_dir)
-        designs.append(curr_design)
 
 def idea0_main():
     c_code = open(C_CODE_FILE, "r").read()
