@@ -1,7 +1,5 @@
-extern int max();
-extern int max();
-extern int max();
-extern int max();
+#define max(X,Y) ((X)>(Y)?(X):(Y))
+
 #pragma ACCEL kernel
 
 void CnnKernel(const float input[256][228][228],const float weight[256][256][5][5],const float bias[256],float output[256][112][112])

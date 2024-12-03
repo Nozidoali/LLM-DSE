@@ -19,7 +19,7 @@ MAX_ITER = 10
 # Prompts
 
 # Constants:
-KERNEL_NAME: str = "gemm-p"
+KERNEL_NAME: str = "top"
 MAKEFILE_STR = f"""
 # Copyright (C) 2019 Falcon Computing Solutions, Inc. - All rights reserved.
 #
