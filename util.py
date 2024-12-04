@@ -8,6 +8,7 @@ import pickle
 import torch
 from typing import List
 from config import *
+import signal
 
 def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
@@ -36,7 +37,18 @@ def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int
 def run_merlin_compile(make_dir: str) -> None:
     merlin_rpt_file = os.path.join(make_dir, "merlin.rpt")
     if DEBUG: subprocess.run(f"echo hi > {merlin_rpt_file}", shell=True)
-    else: subprocess.run(f"cd {make_dir} && make mcc_estimate", shell=True, timeout=40*60)
+    else: 
+        try:
+            process = subprocess.Popen(f"cd {make_dir} && make mcc_estimate", shell=True, preexec_fn = os.setsid)
+            process.wait(timeout=40*60)
+        except subprocess.TimeoutExpired:
+            print("Compilation Timeout. Killing the process group...")
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+            try:
+                process.wait(5)
+            except subprocess.TimeoutExpired:
+                os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                print("Process gorup killed.")
 
 def get_openai_response(prompt, model="gpt-4o"):
     response = openai.chat.completions.create(
@@ -136,7 +148,8 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
         elif key == "WARNING_GUIDELINE":
             prompt_lines += [
                 "When you receive the WARNING including tiling factor >= loop tripcount, please decrease the corresponding TILE FACTOR to make sure the TILE FACTOR times the PARALLEL FACTOR is smaller than the tripcount.", 
-                "When you receive the WARNING including Coarse-grained pipelining NOT applied on loop, please double check that the PIPELINE FACTOR is either off or flatten."
+                "When you receive the WARNING including Coarse-grained pipelining NOT applied on loop, please double check that the PIPELINE FACTOR is either off or flatten.",
+                "When you receive the WARNING including "
             ]
         elif key == "OUTPUT_REGULATION":
             prompt_lines += [
