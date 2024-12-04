@@ -50,18 +50,6 @@ def get_openai_response(prompt, model="gpt-4o"):
     )
     return(response.choices[0].message.content)
 
-def get_openai_response_o1(prompt, model="o1-mini"):
-    response = openai.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "user", "content": "You are an expert in design HLS codes."},
-            {"role": "user", "content": prompt}
-        ],
-        max_completion_tokens=5000,  # Set the largest token numbers
-    )
-    print(response)
-    return(response.choices[0].message.content)
-
 def retrieve_design_from_response(response: str) -> dict:
     try:
         _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
@@ -82,8 +70,7 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
     "PRAGMA_KNOWLEDGE",
     "TARGET_PERFORMANCE", 
     "WARNING_GUIDELINE",
-    "OUTPUT_REGULATION",
-    "COMPILATION_TIME"
+    "OUTPUT_REGULATION"
 ]) -> str:
     prompt_lines = []
     pragma_names = get_default_design(config_file).keys()
@@ -141,11 +128,7 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
             ]
         elif key == "OUTPUT_REGULATION":
             prompt_lines += [
-                "Please only output the new pragma design as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}"
-            ]
-        elif key == "COMPILATION_TIME":
-            prompt_lines += [
-                "When the merlin report is Compilation Timeout, try to avoid using PIPELINE flatten in an outer loop that has several inner loops."
+                "Please output the new pragma design as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}"
             ]
         else:
             raise ValueError(f"Invalid key {key}")
@@ -157,7 +140,7 @@ def extract_perf(input_file):
     lines = open(input_file, "r").readlines()
     target_line_idx = [i for i, l in enumerate(lines) if "Estimated Frequency" in l]
     try:
-        util_values = lines[target_line_idx[0]+4].split("|")[2:]
+        util_values = lines[target_line_idx[0]+3].split("|")[2:]
         util_keys = ['cycles', 'lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']
         return [f"{util_keys[i]} = {util_values[i]}" for i in range(6)]
     except:
