@@ -50,6 +50,18 @@ def get_openai_response(prompt, model="gpt-4o"):
     )
     return(response.choices[0].message.content)
 
+def get_openai_response_o1(prompt, model="o1-mini"):
+    response = openai.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "user", "content": "You are an expert in design HLS codes."},
+            {"role": "user", "content": prompt}
+        ],
+        max_completion_tokens=5000,  # Set the largest token numbers
+    )
+    print(response)
+    return(response.choices[0].message.content)
+
 def retrieve_design_from_response(response: str) -> dict:
     try:
         _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
@@ -140,7 +152,7 @@ def extract_perf(input_file):
     lines = open(input_file, "r").readlines()
     target_line_idx = [i for i, l in enumerate(lines) if "Estimated Frequency" in l]
     try:
-        util_values = lines[target_line_idx[0]+3].split("|")[2:]
+        util_values = lines[target_line_idx[0]+4].split("|")[2:]
         util_keys = ['cycles', 'lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']
         return [f"{util_keys[i]} = {util_values[i]}" for i in range(6)]
     except:
