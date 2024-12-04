@@ -13,8 +13,10 @@ def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
     return {p: config_dict[p]["default"] for p in config_dict}
 
-def load_designs_from_pickle(pickle_file: str) -> List[dict]:
-    return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for _, d in pickle.load(open(pickle_file, "rb")).items()]
+def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
+    results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
+    selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
+    return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for d in selected]
 
 def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int) -> str:
     curr_dir = os.path.join(work_dir, f"{idx}/")
