@@ -8,8 +8,8 @@ def llm_dse(c_code, config_file):
     curr_design: dict = get_default_design(config_file)
     # Keep the list of designs
     designs = []
-    designs.append(curr_design)
     for i_steps in range(MAX_ITER):
+        designs.append(curr_design)
         prompt_str = ""
         print("-"*80 + f"\nStarting iteration {i_steps}")
         print("-"*80 + f"\nStarting iteration {i_steps}", file=logfile)
@@ -25,8 +25,6 @@ def llm_dse(c_code, config_file):
         curr_design = retrieve_design_from_response(response)
         print(curr_design, file=logfile)
         assert isinstance(curr_design, dict), f"expecting dict, got {type(curr_design)}"
-        # run_merlin_compile(curr_dir)
-        designs.append(curr_design)
 
     logfile.close()
 

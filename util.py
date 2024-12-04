@@ -4,11 +4,17 @@ import re
 import subprocess
 import openai
 import traceback
+import pickle
+import torch
+from typing import List
 from config import *
 
 def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
     return {p: config_dict[p]["default"] for p in config_dict}
+
+def load_designs_from_pickle(pickle_file: str) -> List[dict]:
+    return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for _, d in pickle.load(open(pickle_file, "rb")).items()]
 
 def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int) -> str:
     curr_dir = os.path.join(work_dir, f"{idx}/")
@@ -23,6 +29,7 @@ def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int
     open(curr_dir + "Makefile", 'w').write(MAKEFILE_STR)
     open(mcc_common_dir + "mcc_common.mk", 'w').write(MCC_COMMON_STR)
     return curr_dir
+
 
 def run_merlin_compile(make_dir: str) -> None:
     merlin_rpt_file = os.path.join(make_dir, "merlin.rpt")
@@ -84,9 +91,21 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
                 "Given the C code with the empty brackets to fill in pragma parameters",
                 c_code,
             ]
+        elif key == "OBJECTIVES":
+            prompt_lines += [
+                "Your task is to generate a new pragma variable assignment for the keys: " + ",".join(pragma_names),
+            ]
+            config_dict = json.load(open(config_file, "r"))["design-space.definition"]
+            constraints_str = "\n".join(
+                [f"pragma {pragma}'s options are {config_dict[pragma]['options']}" for pragma in config_dict]
+            )
+            prompt_lines += [
+                "Such that the following constraints are honored:\n " + constraints_str
+            ]
         elif key == "CURR_DESIGN":
             prompt_lines += [
-                "The following are several pragma designs with their merlin report and merlin log. "
+                "The following are several previous designs with their merlin report and merlin log. ",
+                "You should pay attention to the cycle count and the resource utilization in the merlin report and the warning in the merlin log.",
             ]
             for i, design in enumerate(designs):
                 prompt_lines += [
@@ -97,35 +116,26 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
                     f"The warning when doing merlin compilation for the design {i}:", 
                     *extract_warning(os.path.join(work_dir, str(i), "merlin.log"))
                 ]
-        elif key == "OBJECTIVES":
-            prompt_lines += [
-                "Please generate a new pragma variable assignment for the keys: " + ",".join(pragma_names),
-                "The prioritized goal is to minimized the number of cycles, the second goal is to eliminate the warnings."
-            ]
-            config_dict = json.load(open(config_file, "r"))["design-space.definition"]
-            constraints_str = "\n".join(
-                [f"pragma {pragma}'s options are {config_dict[pragma]['options']}" for pragma in config_dict]
-            )
-            prompt_lines.append(
-                "Such that the following constraints are honored:\n " + constraints_str
-            )
         elif key == "PRAGMA_KNOWLEDGE":
             prompt_lines += [
                 "The following are the pragma knowledge that you can use to generate the new pragma design:", 
                 " (1) The pragmas in the C code will be compiled to HLS codes. ",
                 " (2) The #pragma ACCEL will affect in the first for loop under it.",
-                " (3) Please notice the #pragma ACCEL pipeline flatten will unroll all the for loops below the for loop under this pragma.",
-                # " (4) When chosing the parameter for parallel and tile, it would be better to chose a integer that could divide the corresponding loop bound. Additionally, it would be better that the multiplication of the parallel and the tile factor could divide the corresponding loop bound.",
-                " (4) When chosing the parameter for parallel, chose a integer that could divide the corresponding loop bound."
+                " (3) The #pragma ACCEL will be followed by three techniques: pipeline, parallel and tile. You want to choose the best combination of these three techniques to optimize the performance according to your anticipation of the cycle count and the resource utilization.",
+                "       (3a) For #pragma ACCEL PIPELINE, \"flatten\" will unroll all the for loops below the for loop under this pragma, \"off\" will not apply any pipelining, please only choose between these two options. You might want to choose \"flatten\" if the loop bound is small and the loop body is simple and the DSP utilization is below 0.8 (80%). Otherwise, for the outer loop of a nested loops you might want to choose \"off\".",
+                "       (3b) For #pragma ACCEL TILE, it would be better to chose a integer that could divide the corresponding loop bound. Please set it to be 1 if the BRAM utilization is below 0.8 (80%). If the previous point is above 0.8, please choose a integer that could divide the corresponding loop bound and make sure the TILE FACTOR times the PARALLEL FACTOR is smaller than the tripcount.",
+                "       (3c) For #pragma ACCEL PARALLEL, it will parallelize the for loop under it. Please choose a integer that could divide the corresponding loop bound. Increasing parallel factor will increase the resource utilization but improve the performance and decease the number of cycles (which is your target)."
             ]
         elif key == "TARGET_PERFORMANCE":
             prompt_lines += [
-                "The target cycle should be less than 9000. If the cycle count is larger than 9000, consider increase the PARALLEL FACTOR and use the PIPELINE FLATTEN.",
-                "The utilization of DSP, BRAM, LUT, FF and URAM should be as large as possible, but don't exceed 80%."
+                "The target cycle of this kernel should be less than 10000. If the cycle count is greater than 10000, please consider using the PIPELINE flatten or increase the PARALLEL FACTOR.",
+                "The utilization of DSP, BRAM, LUT, FF and URAM should be as large as possible, but don't exceed 0.8.", 
+                "Additionally, the compile time of the merlin should not exceed 40 minutes, meaning that your optimization should not be too aggressive."
             ]
         elif key == "WARNING_GUIDELINE":
             prompt_lines += [
-                "When you receive the WARNING include tiling factor >= loop tripcount, please decrease the corresponding TILE FACTOR.",
+                "When you receive the WARNING including tiling factor >= loop tripcount, please decrease the corresponding TILE FACTOR to make sure the TILE FACTOR times the PARALLEL FACTOR is smaller than the tripcount.", 
+                "When you receive the WARNING including Coarse-grained pipelining NOT applied on loop, please double check that the PIPELINE FACTOR is either off or flatten."
             ]
         elif key == "OUTPUT_REGULATION":
             prompt_lines += [
@@ -137,6 +147,7 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
             ]
         else:
             raise ValueError(f"Invalid key {key}")
+    print("\n".join(prompt_lines))
     return "\n".join(prompt_lines)
 
 
