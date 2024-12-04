@@ -79,7 +79,7 @@ ifeq ($(VENDOR),XILINX)
         #DEVICE=xilinx_vcu1525_dynamic_5_1
 				#DEVICE=xilinx_u250_xdma_201830_1
         #DEVICE=xilinx_vcu1525_xdma_201830_1
-        DEVICE=xilinx_u200_xdma_201830_2
+        DEVICE=xilinx_u200_gen3x16_xdma_2_202110_1
     endif
     #PLATFORM=sdaccel::$(DEVICE)
     PLATFORM=vitis::$(DEVICE)

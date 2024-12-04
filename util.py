@@ -41,6 +41,18 @@ def get_openai_response(prompt, model="gpt-4o"):
     )
     return(response.choices[0].message.content)
 
+def get_openai_response_o1(prompt, model="o1-mini"):
+    response = openai.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "user", "content": "You are an expert in design HLS codes."},
+            {"role": "user", "content": prompt}
+        ],
+        max_completion_tokens=5000,  # Set the largest token numbers
+    )
+    print(response)
+    return(response.choices[0].message.content)
+
 def retrieve_design_from_response(response: str) -> dict:
     try:
         _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
@@ -61,7 +73,8 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
     "PRAGMA_KNOWLEDGE",
     "TARGET_PERFORMANCE", 
     "WARNING_GUIDELINE",
-    "OUTPUT_REGULATION"
+    "OUTPUT_REGULATION",
+    "COMPILATION_TIME"
 ]) -> str:
     prompt_lines = []
     pragma_names = get_default_design(config_file).keys()
@@ -85,11 +98,10 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
                     *extract_warning(os.path.join(work_dir, str(i), "merlin.log"))
                 ]
         elif key == "OBJECTIVES":
-            prompt_lines.append(
-                "Please generate a new pragma variable assignment for the keys: " + ",".join(pragma_names) 
-                + "The prioritized goal is to minimized the number of cycles, the second goal is to eliminate the warnings." 
-                + "Only output the JSON file."
-            )
+            prompt_lines += [
+                "Please generate a new pragma variable assignment for the keys: " + ",".join(pragma_names),
+                "The prioritized goal is to minimized the number of cycles, the second goal is to eliminate the warnings."
+            ]
             config_dict = json.load(open(config_file, "r"))["design-space.definition"]
             constraints_str = "\n".join(
                 [f"pragma {pragma}'s options are {config_dict[pragma]['options']}" for pragma in config_dict]
@@ -103,12 +115,13 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
                 " (1) The pragmas in the C code will be compiled to HLS codes. ",
                 " (2) The #pragma ACCEL will affect in the first for loop under it.",
                 " (3) Please notice the #pragma ACCEL pipeline flatten will unroll all the for loops below the for loop under this pragma.",
-                " (4) When chosing the parameter for parallel and tile, it would be better to chose a integer that could divide the corresponding loop bound. Additionally, it would be better that the multiplication of the parallel and the tile factor could divide the corresponding loop bound.",
+                # " (4) When chosing the parameter for parallel and tile, it would be better to chose a integer that could divide the corresponding loop bound. Additionally, it would be better that the multiplication of the parallel and the tile factor could divide the corresponding loop bound.",
+                " (4) When chosing the parameter for parallel, chose a integer that could divide the corresponding loop bound."
             ]
         elif key == "TARGET_PERFORMANCE":
             prompt_lines += [
-                "The target cycle should be less than 10000.",
-                "The utilization of DSP, BRAM, LUT, FF and URAM should be as large as possible, but don't exceed 0.8."
+                "The target cycle should be less than 9000. If the cycle count is larger than 9000, consider increase the PARALLEL FACTOR and use the PIPELINE FLATTEN.",
+                "The utilization of DSP, BRAM, LUT, FF and URAM should be as large as possible, but don't exceed 80%."
             ]
         elif key == "WARNING_GUIDELINE":
             prompt_lines += [
@@ -116,7 +129,11 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
             ]
         elif key == "OUTPUT_REGULATION":
             prompt_lines += [
-                "Please output the new pragma design as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}"
+                "Please only output the new pragma design as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}"
+            ]
+        elif key == "COMPILATION_TIME":
+            prompt_lines += [
+                "When the merlin report is Compilation Timeout, try to avoid using PIPELINE flatten in an outer loop that has several inner loops."
             ]
         else:
             raise ValueError(f"Invalid key {key}")
@@ -125,9 +142,9 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
 
 def extract_perf(input_file):
     lines = open(input_file, "r").readlines()
-    target_line_idx = [i for i, l in enumerate(lines) if "Target Performance" in l]
+    target_line_idx = [i for i, l in enumerate(lines) if "Estimated Frequency" in l]
     try:
-        util_values = lines[target_line_idx[0]+3].split("|")[2:]
+        util_values = lines[target_line_idx[0]+4].split("|")[2:]
         util_keys = ['cycles', 'lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']
         return [f"{util_keys[i]} = {util_values[i]}" for i in range(6)]
     except:
