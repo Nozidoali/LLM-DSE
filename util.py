@@ -94,7 +94,8 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
     "PRAGMA_KNOWLEDGE",
     "TARGET_PERFORMANCE", 
     "WARNING_GUIDELINE",
-    "OUTPUT_REGULATION"
+    "OUTPUT_REGULATION",
+    # "DESIGN_HINT"
 ]) -> str:
     prompt_lines = []
     pragma_names = get_default_design(config_file).keys()
@@ -141,15 +142,18 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
             ]
         elif key == "TARGET_PERFORMANCE":
             prompt_lines += [
-                "The target cycle of this kernel should be less than 10000. If the cycle count is greater than 10000, please consider using the PIPELINE flatten or increase the PARALLEL FACTOR.",
+                "The target cycle of this kernel should be less than 40000. If the cycle count is greater than 10000, please consider using the PIPELINE flatten or increase the PARALLEL FACTOR.",
                 "The utilization of DSP, BRAM, LUT, FF and URAM should be as large as possible, but don't exceed 0.8.", 
                 "Additionally, the compile time of the merlin should not exceed 40 minutes, meaning that your optimization should not be too aggressive."
+            ]
+        elif key == "DESIGN_HINT":
+            prompt_lines += [
+                "First try increasing the parallel factor in the inner most loop."
             ]
         elif key == "WARNING_GUIDELINE":
             prompt_lines += [
                 "When you receive the WARNING including tiling factor >= loop tripcount, please decrease the corresponding TILE FACTOR to make sure the TILE FACTOR times the PARALLEL FACTOR is smaller than the tripcount.", 
                 "When you receive the WARNING including Coarse-grained pipelining NOT applied on loop, please double check that the PIPELINE FACTOR is either off or flatten.",
-                "When you receive the WARNING including "
             ]
         elif key == "OUTPUT_REGULATION":
             prompt_lines += [
@@ -162,7 +166,11 @@ def compile_prompt(work_dir: str, c_code: str, config_file: str, designs: list, 
 
 
 def extract_perf(input_file):
-    lines = open(input_file, "r").readlines()
+    try:
+        with open(input_file, "r") as file:
+            lines = file.readlines()
+    except:
+        return ["Compilation Timeout."]
     target_line_idx = [i for i, l in enumerate(lines) if "Estimated Frequency" in l]
     try:
         util_values = lines[target_line_idx[0]+4].split("|")[2:]
@@ -175,3 +183,16 @@ def extract_perf(input_file):
 def extract_warning(input_file):
     if not os.path.exists(input_file): return ["No warning found in the log file"]
     return [l for l in open(input_file, "r").readlines() if "WARNING" in l]
+
+
+from abc import ABC, abstractmethod
+class Explorer(ABC):
+
+    def __init__(self, c_code: str, logfile: str):
+        self.c_code = c_code
+        self.logfile = logfile
+        self.designs = []
+        self.prune_space = {}
+    @abstractmethod
+    def explore(self):
+        pass

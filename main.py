@@ -16,7 +16,7 @@ def llm_dse(c_code, config_file):
         explorer.designs.append(curr_design)
         curr_dir = apply_design_to_code(WORK_DIR, c_code, curr_design, i_steps)
         if i_steps != 0: run_merlin_compile(curr_dir)
-        if i_steps >= MAX_ITER: break
+        if i_steps >= MAX_ITER - 1: break
         curr_design = explorer.explore(i_steps)
         assert isinstance(curr_design, dict), f"expecting dict, got {type(curr_design)}"
 
