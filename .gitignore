@@ -1,6 +1,6 @@
 .env
 work/
+work_*
 
 __pycache__/
 *.pyc
-

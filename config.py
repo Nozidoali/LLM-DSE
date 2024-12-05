@@ -3,18 +3,19 @@ import dotenv
 
 # Load environment variables
 dotenv.load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Control factors
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEBUG: bool = False
-KERNEL: str = "bradybench_0"
-C_CODE_FILE: str = f"./data/{KERNEL}.c"
-CONFIG_FILE: str = f"./data/{KERNEL}.json"
-PICKLE_FILE: str = f"./data/{KERNEL}.pickle"
-WORK_DIR: str = f"./work/{KERNEL}"
+BENCHMARK: str = "bradybench_19"
+WORK_DIR: str = f"{os.getenv("WORD_DIR")}/work_{BENCHMARK}"
+C_CODE_FILE: str = f"./data/{BENCHMARK}.c"
+CONFIG_FILE: str = f"./data/{BENCHMARK}.json"
+PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
+
+COMPILE_TIMEOUT: int = 40 * 60
 
 # DSE
-INIT_ITER = 5
 MAX_ITER = 10
 
 # Prompts
