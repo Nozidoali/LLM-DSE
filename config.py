@@ -7,10 +7,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Control factors
 DEBUG: bool = False
-C_CODE_FILE: str = "./data/new5.c"
-CONFIG_FILE: str = "./data/new5.json"
-PICKLE_FILE: str = "./data/new5.pickle"
-WORK_DIR: str = "./work"
+KERNEL: str = "bradybench_0"
+C_CODE_FILE: str = f"./data/{KERNEL}.c"
+CONFIG_FILE: str = f"./data/{KERNEL}.json"
+PICKLE_FILE: str = f"./data/{KERNEL}.pickle"
+WORK_DIR: str = f"./work/{KERNEL}"
 
 # DSE
 INIT_ITER = 5
@@ -81,7 +82,7 @@ ifeq ($(VENDOR),XILINX)
         #DEVICE=xilinx_vcu1525_dynamic_5_1
 				#DEVICE=xilinx_u250_xdma_201830_1
         #DEVICE=xilinx_vcu1525_xdma_201830_1
-        DEVICE=xilinx_u200_xdma_201830_2
+        DEVICE=xilinx_u200_gen3x16_xdma_2_202110_1
     endif
     #PLATFORM=sdaccel::$(DEVICE)
     PLATFORM=vitis::$(DEVICE)
