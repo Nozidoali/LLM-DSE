@@ -17,6 +17,7 @@ def get_default_design(ds_config_file: str) -> dict:
 def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
     results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
     selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
+    print(f"INFO: selected {len(selected)} designs from {len(results)} designs")
     return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for d in selected]
 
 def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int) -> str:
@@ -39,8 +40,8 @@ def run_merlin_compile(make_dir: str) -> None:
     if DEBUG: subprocess.run(f"echo hi > {merlin_rpt_file}", shell=True)
     else: 
         try:
-            process = subprocess.Popen(f"cd {make_dir} && make mcc_estimate", shell=True, preexec_fn = os.setsid)
-            process.wait(timeout=40*60)
+            process = subprocess.Popen(f"cd {make_dir} && make clean && rm -rf .merlin_prj && make mcc_estimate", shell=True, preexec_fn = os.setsid)
+            process.wait(timeout=COMPILE_TIMEOUT)
         except subprocess.TimeoutExpired:
             print("Compilation Timeout. Killing the process group...")
             os.killpg(os.getpgid(process.pid), signal.SIGTERM)

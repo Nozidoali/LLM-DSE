@@ -63,7 +63,7 @@ void top(float wind_u[80][80][10],float wind_v[80][80][10],float wind_w[80][80][
       
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L8}
       for (int j = 1; j < 80 - 1; j++) {
-        for (int z = 0; z < 10; z++) {
+        for (int z = 1; z < 10 - 1; z++) {
           temperature[i][j][z] += 0.1f * (wind_u[i][j][z] * (temperature[i + 1][j][z] - temperature[i - 1][j][z]) + wind_v[i][j][z] * (temperature[i][j + 1][z] - temperature[i][j - 1][z]) + wind_w[i][j][z] * (temperature[i][j][z + 1] - temperature[i][j][z - 1]));
         }
       }
@@ -103,7 +103,7 @@ void top(float wind_u[80][80][10],float wind_v[80][80][10],float wind_w[80][80][
       
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L10}
       for (int j = 1; j < 80 - 1; j++) {
-        for (int z = 0; z < 10; z++) {
+        for (int z = 0; z < 10 - 1; z++) {
           pressure[i][j][z] -= 0.1f * (temperature[i][j][z] - temperature[i][j][z + 1]);
         }
       }
