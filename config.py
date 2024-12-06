@@ -27,7 +27,7 @@ PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
 COMPILE_TIMEOUT: int = 40 * 60
 
 # DSE
-MAX_ITER = 10
+MAX_ITER = 100
 
 def print_config():
 	print(f"-"*80)

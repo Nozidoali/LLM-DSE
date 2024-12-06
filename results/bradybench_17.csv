@@ -1,0 +1,5 @@
+cycles,lut utilization,FF utilization,BRAM utilization,DSP utilization,URAM utilization,__PARA__L0,__PARA__L1,__PARA__L2,__PARA__L3,__PARA__L4,__PIPE__L0,__PIPE__L1,__PIPE__L3,__TILE__L0,__TILE__L1,__TILE__L3,step
+1626775 (6.507ms),11575 (~0%),8476 (~0%),138 (3%),5 (~0%),0 (~0%),1,1,1,1,1,off,off,off,1,1,1,0
+1628235 (6.513ms),12547 (1%),16428 (~0%),122 (2%),5 (~0%),0 (~0%),1,1,1,64,1,off,off,off,1,1,1,1
+4880 (0.02ms),1159306 (98%),2445251 (103%),90 (2%),20480 (299%),0 (~0%),1,1,1,64,64,off,off,off,1,1,1,2
+329803 (1.319ms),32133 (2%),27916 (1%),106 (2%),15 (~0%),0 (~0%),1,1,1,64,16,off,off,off,1,1,1,3

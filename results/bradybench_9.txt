@@ -1,0 +1,139 @@
+
+================================================================================
+For the given C code
+ ```c++ 
+#pragma ACCEL kernel
+
+void top(double hamiltonian[256][256],double density[256][256],double energy[256])
+{
+  double row_sum;
+  
+#pragma ACCEL PIPELINE auto{__PIPE__L0}
+  
+#pragma ACCEL TILE FACTOR=auto{__TILE__L0}
+  
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L0}
+  for (int i = 0; i < 256; i++) {
+    energy[i] = 0.0;
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L2}
+    for (int j = 0; j < 256; j++) {
+      density[i][j] = 0.0;
+    }
+  }
+  
+#pragma ACCEL PIPELINE auto{__PIPE__L1}
+  
+#pragma ACCEL TILE FACTOR=auto{__TILE__L1}
+  for (int iter = 0; iter < 10; iter++) {
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L3}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L3}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L3}
+    for (int i = 0; i < 256; i++) {
+      
+#pragma ACCEL PIPELINE auto{__PIPE__L5}
+      
+#pragma ACCEL TILE FACTOR=auto{__TILE__L5}
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L5}
+      for (int j = 0; j < 256; j++) {
+        density[i][j] = 0.0;
+        
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L7}
+        for (int k = 0; k < 256; k++) {
+          density[i][j] += hamiltonian[i][k] * hamiltonian[k][j];
+        }
+      }
+    }
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L4}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L4}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L4}
+    for (int i = 0; i < 256; i++) {
+      row_sum = 0.0;
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L6}
+      for (int j = 0; j < 256; j++) {
+        row_sum += density[i][j] * hamiltonian[i][j];
+      }
+      energy[i] = row_sum;
+    }
+  }
+}
+
+``` with some pragma placeholders for high level synthesis (HLS), your task is to choose one of the following updates that optimize clock cycles the most.
+(0): change __PARA__L0 from 1 to 8
+(1): change __PARA__L2 from 1 to 16
+(2): change __PARA__L3 from 256 to 32
+(3): change __PARA__L4 from 1 to 8
+(4): change __PARA__L5 from 1 to 8
+(5): change __PARA__L6 from 1 to 8
+(6): change __PARA__L7 from 1 to 16
+(7): change __PIPE__L0 from off to flatten
+(8): change __PIPE__L1 from off to flatten
+(9): change __PIPE__L3 from off to flatten
+(10): change __PIPE__L4 from off to flatten
+(11): change __PIPE__L5 from off to flatten
+(12): change __TILE__L0 from 1 to 8
+(13): change __TILE__L1 from 1 to 10
+(14): change __TILE__L3 from 1 to 4
+(15): change __TILE__L4 from 1 to 8
+(16): change __TILE__L5 from 1 to 8
+Note that when:
+the value of __PARA__L0 is 1
+the value of __PARA__L2 is 1
+the value of __PARA__L3 is 256
+the value of __PARA__L4 is 1
+the value of __PARA__L5 is 1
+the value of __PARA__L6 is 1
+the value of __PARA__L7 is 1
+the value of __PIPE__L0 is off
+the value of __PIPE__L1 is off
+the value of __PIPE__L3 is off
+the value of __PIPE__L4 is off
+the value of __PIPE__L5 is off
+the value of __TILE__L0 is 1
+the value of __TILE__L1 is 1
+the value of __TILE__L3 is 1
+the value of __TILE__L4 is 1
+the value of __TILE__L5 is 1
+The kernel's results after HLS synthesis are:
+ 
+To better understand the problem, here are some knowledge about the HLS pragmas you are encountering:
+ For the __PARA__ pragma:
+  (1) Parallel pragram will parallelize the first for loop in the c code under __PARA__.
+  (2) Increasing the parallel factor will increase the resource utilization but improve the performance and decease the number of cycles (which is one of your target).
+  (3) Increasing parallel factor roughly linearly increase the resource utilization within the loop it applies on, so you may scale the factor with respect to the ratio between current utilization with the 80% budget.
+  (4) Increasing the parallel factor will also increase the compilation time, you must decrease the parallel factor if you received the compilation timeout.
+ For the __TILE__ pragma:
+  (1) Tile pragma will tile the first for loop in the c code under __TILE__.
+  (2) Increasing the tile factor will reduce the memory transfer cycles because it will restrict the memory transfer.
+ For the __PIPE__ pragma:
+  (1) Pipeline pragma will affect MULTIPLE loops under __PIPELINE__.
+  (2) The flatten option will unroll all the for loops (which means putting __PARA__ equals to the loop bound in the for loop) under this pragma.
+  (3) Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.
+  (4) Choosing the empty string means coars-grained pipelining, which is useful when you believe the loop inside it has fewer loop-carried dependencies.
+To make better decision, here are some information about the preference:
+  (1) You should prioritize optimizing the __PARA__ pragma first, as it affect the performance the most.
+  (2) If you think all the parallel factors are already optimal, you consider pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.
+  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the c code under __TILE__.
+  (4) By default, setting __TILE__ to 1 is perferable.
+  (5) By default, setting __PIPE__ to 1 is perferable.
+Make the update to the current design and output only the new pragma design for the keys: __PARA__L0,__PARA__L2,__PARA__L3,__PARA__L4,__PARA__L5,__PARA__L6,__PARA__L7,__PIPE__L0,__PIPE__L1,__PIPE__L3,__PIPE__L4,__PIPE__L5,__TILE__L0,__TILE__L1,__TILE__L3,__TILE__L4,__TILE__L5as a JSON string. i.e., can be represented as {"pragma1": value1, "pragma2": value2, ...}
+--------------------------------------------------------------------------------
+To optimize the clock cycles, we should prioritize optimizing the `__PARA__` pragmas first since they have the most significant impact on performance. Among the available options for `__PARA__`, changing `__PARA__L3` from 256 to 32 would decrease the parallelism, which is not optimal. Instead, increasing parallelism where possible will generally improve performance.
+
+The next best option would be to increase the parallel factor for loops that are not fully parallelized yet. So, we should consider options that increase parallelism, such as changing `__PARA__L7` from 1 to 16, which can significantly reduce cycles by improving parallelism in the innermost loop of a matrix multiplication.
+
+Here's the updated pragma design with the chosen optimization:
+
+```json
+{"__PARA__L0": 1, "__PARA__L2": 1, "__PARA__L3": 256, "__PARA__L4": 1, "__PARA__L5": 1, "__PARA__L6": 1, "__PARA__L7": 16, "__PIPE__L0": "off", "__PIPE__L1": "off", "__PIPE__L3": "off", "__PIPE__L4": "off", "__PIPE__L5": "off", "__TILE__L0": 1, "__TILE__L1": 1, "__TILE__L3": 1, "__TILE__L4": 1, "__TILE__L5": 1}
+```
+
+This update focuses on maximizing resource utilization for parallel computation in the innermost loop, which typically yields the best performance boost in matrix operations.

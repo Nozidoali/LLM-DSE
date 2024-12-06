@@ -5,5 +5,11 @@ work_*
 __pycache__/
 *.pyc
 *.csv
+*.png
 
 *.log
+
+# results/
+!results/*.txt
+!results/*.csv
+!results/*.pdf

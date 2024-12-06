@@ -62,7 +62,7 @@ def get_openai_response(prompt, model="gpt-4o"):
         max_tokens=1000,  # Set the largest token numbers
         temperature=0.7,  # Control the randomness of the generative result
     )
-    open(OPENAI_LOGFILE, "w+").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response.choices[0].message.content)
+    open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response.choices[0].message.content)
     return(response.choices[0].message.content)
 
 def get_openai_response_o1(prompt, model="o1-mini"):

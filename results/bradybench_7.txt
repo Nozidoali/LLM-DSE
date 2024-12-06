@@ -1,0 +1,248 @@
+
+================================================================================
+For the given C code
+ ```c++ 
+#pragma ACCEL kernel
+
+void top(float wind_u[80][80][10],float wind_v[80][80][10],float wind_w[80][80][10],float temperature[80][80][10],float pressure[80][80][10])
+{
+  float new_wind_u[80][80][10];
+  float new_wind_v[80][80][10];
+  float new_wind_w[80][80][10];
+  
+#pragma ACCEL PIPELINE auto{__PIPE__L0}
+  
+#pragma ACCEL TILE FACTOR=auto{__TILE__L0}
+  for (int t = 0; t < 5; t++) {
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L1}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L1}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L1}
+    for (int i = 1; i < 80 - 1; i++) {
+      
+#pragma ACCEL PIPELINE auto{__PIPE__L6}
+      
+#pragma ACCEL TILE FACTOR=auto{__TILE__L6}
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L6}
+      for (int j = 1; j < 80 - 1; j++) {
+        for (int z = 0; z < 10; z++) {
+          new_wind_u[i][j][z] = wind_u[i][j][z] + 0.1f * (wind_u[i + 1][j][z] - ((float )2) * wind_u[i][j][z] + wind_u[i - 1][j][z]) + 0.1f * (wind_u[i][j + 1][z] - ((float )2) * wind_u[i][j][z] + wind_u[i][j - 1][z]);
+          new_wind_v[i][j][z] = wind_v[i][j][z] + 0.1f * (wind_v[i + 1][j][z] - ((float )2) * wind_v[i][j][z] + wind_v[i - 1][j][z]) + 0.1f * (wind_v[i][j + 1][z] - ((float )2) * wind_v[i][j][z] + wind_v[i][j - 1][z]);
+        }
+      }
+    }
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L2}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L2}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L2}
+    for (int i = 1; i < 80 - 1; i++) {
+      
+#pragma ACCEL PIPELINE auto{__PIPE__L7}
+      
+#pragma ACCEL TILE FACTOR=auto{__TILE__L7}
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L7}
+      for (int j = 1; j < 80 - 1; j++) {
+        for (int z = 1; z < 10 - 1; z++) {
+          new_wind_w[i][j][z] = wind_w[i][j][z] + 0.1f * (pressure[i][j][z - 1] - pressure[i][j][z + 1]);
+        }
+      }
+    }
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L3}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L3}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L3}
+    for (int i = 1; i < 80 - 1; i++) {
+      
+#pragma ACCEL PIPELINE auto{__PIPE__L8}
+      
+#pragma ACCEL TILE FACTOR=auto{__TILE__L8}
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L8}
+      for (int j = 1; j < 80 - 1; j++) {
+        for (int z = 1; z < 10 - 1; z++) {
+          temperature[i][j][z] += 0.1f * (wind_u[i][j][z] * (temperature[i + 1][j][z] - temperature[i - 1][j][z]) + wind_v[i][j][z] * (temperature[i][j + 1][z] - temperature[i][j - 1][z]) + wind_w[i][j][z] * (temperature[i][j][z + 1] - temperature[i][j][z - 1]));
+        }
+      }
+    }
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L4}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L4}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L4}
+    for (int i = 0; i < 80; i++) {
+      
+#pragma ACCEL PIPELINE auto{__PIPE__L9}
+      
+#pragma ACCEL TILE FACTOR=auto{__TILE__L9}
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L9}
+      for (int j = 0; j < 80; j++) {
+        for (int z = 0; z < 10; z++) {
+          wind_u[i][j][z] = new_wind_u[i][j][z];
+          wind_v[i][j][z] = new_wind_v[i][j][z];
+          wind_w[i][j][z] = new_wind_w[i][j][z];
+        }
+      }
+    }
+    
+#pragma ACCEL PIPELINE auto{__PIPE__L5}
+    
+#pragma ACCEL TILE FACTOR=auto{__TILE__L5}
+    
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L5}
+    for (int i = 1; i < 80 - 1; i++) {
+      
+#pragma ACCEL PIPELINE auto{__PIPE__L10}
+      
+#pragma ACCEL TILE FACTOR=auto{__TILE__L10}
+      
+#pragma ACCEL PARALLEL FACTOR=auto{__PARA__L10}
+      for (int j = 1; j < 80 - 1; j++) {
+        for (int z = 0; z < 10 - 1; z++) {
+          pressure[i][j][z] -= 0.1f * (temperature[i][j][z] - temperature[i][j][z + 1]);
+        }
+      }
+    }
+  }
+}
+
+``` with some pragma placeholders for high level synthesis (HLS), your task is to choose one of the following updates that optimize clock cycles the most.
+(0): change __PARA__L1 from 6 to 13
+(1): change __PARA__L10 from 1 to 6
+(2): change __PARA__L2 from 26 to 13
+(3): change __PARA__L3 from 1 to 6
+(4): change __PARA__L4 from 1 to 16
+(5): change __PARA__L5 from 1 to 6
+(6): change __PARA__L6 from 1 to 6
+(7): change __PARA__L7 from 1 to 13
+(8): change __PARA__L8 from 1 to 6
+(9): change __PARA__L9 from 1 to 10
+(10): change __PIPE__L0 from off to flatten
+(11): change __PIPE__L1 from off to flatten
+(12): change __PIPE__L10 from off to flatten
+(13): change __PIPE__L2 from off to flatten
+(14): change __PIPE__L3 from off to flatten
+(15): change __PIPE__L4 from off to flatten
+(16): change __PIPE__L5 from off to flatten
+(17): change __PIPE__L6 from off to flatten
+(18): change __PIPE__L7 from off to flatten
+(19): change __PIPE__L8 from off to flatten
+(20): change __PIPE__L9 from off to flatten
+(21): change __TILE__L0 from 1 to 4
+(22): change __TILE__L1 from 1 to 4
+(23): change __TILE__L10 from 1 to 4
+(24): change __TILE__L2 from 1 to 8
+(25): change __TILE__L3 from 1 to 78
+(26): change __TILE__L4 from 1 to 80
+(27): change __TILE__L5 from 1 to 78
+(28): change __TILE__L6 from 1 to 4
+(29): change __TILE__L7 from 1 to 8
+(30): change __TILE__L8 from 1 to 4
+(31): change __TILE__L9 from 1 to 8
+Note that when:
+the value of __PARA__L1 is 6
+the value of __PARA__L10 is 1
+the value of __PARA__L2 is 26
+the value of __PARA__L3 is 1
+the value of __PARA__L4 is 1
+the value of __PARA__L5 is 1
+the value of __PARA__L6 is 1
+the value of __PARA__L7 is 1
+the value of __PARA__L8 is 1
+the value of __PARA__L9 is 1
+the value of __PIPE__L0 is off
+the value of __PIPE__L1 is off
+the value of __PIPE__L10 is off
+the value of __PIPE__L2 is off
+the value of __PIPE__L3 is off
+the value of __PIPE__L4 is off
+the value of __PIPE__L5 is off
+the value of __PIPE__L6 is off
+the value of __PIPE__L7 is off
+the value of __PIPE__L8 is off
+the value of __PIPE__L9 is off
+the value of __TILE__L0 is 1
+the value of __TILE__L1 is 1
+the value of __TILE__L10 is 1
+the value of __TILE__L2 is 1
+the value of __TILE__L3 is 1
+the value of __TILE__L4 is 1
+the value of __TILE__L5 is 1
+the value of __TILE__L6 is 1
+the value of __TILE__L7 is 1
+the value of __TILE__L8 is 1
+the value of __TILE__L9 is 1
+The kernel's results after HLS synthesis are:
+ cycles = 27670655 (110.683ms)
+lut utilization = 225081 (19%)
+FF utilization = 277958 (11%)
+BRAM utilization = 1390 (32%)
+DSP utilization = 318 (4%)
+URAM utilization = 0 (~0%)
+To better understand the problem, here are some knowledge about the HLS pragmas you are encountering:
+ For the __PARA__ pragma:
+  (1) Parallel pragram will parallelize the first for loop in the c code under __PARA__.
+  (2) Increasing the parallel factor will increase the resource utilization but improve the performance and decease the number of cycles (which is one of your target).
+  (3) Increasing parallel factor roughly linearly increase the resource utilization within the loop it applies on, so you may scale the factor with respect to the ratio between current utilization with the 80% budget.
+  (4) Increasing the parallel factor will also increase the compilation time, you must decrease the parallel factor if you received the compilation timeout.
+ For the __TILE__ pragma:
+  (1) Tile pragma will tile the first for loop in the c code under __TILE__.
+  (2) Increasing the tile factor will reduce the memory transfer cycles because it will restrict the memory transfer.
+ For the __PIPE__ pragma:
+  (1) Pipeline pragma will affect MULTIPLE loops under __PIPELINE__.
+  (2) The flatten option will unroll all the for loops (which means putting __PARA__ equals to the loop bound in the for loop) under this pragma.
+  (3) Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.
+  (4) Choosing the empty string means coars-grained pipelining, which is useful when you believe the loop inside it has fewer loop-carried dependencies.
+To make better decision, here are some information about the preference:
+  (1) You should prioritize optimizing the __PARA__ pragma first, as it affect the performance the most.
+  (2) If you think all the parallel factors are already optimal, you consider pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.
+  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the c code under __TILE__.
+  (4) By default, setting __TILE__ to 1 is perferable.
+  (5) By default, setting __PIPE__ to 1 is perferable.
+Make the update to the current design and output only the new pragma design for the keys: __PARA__L1,__PARA__L10,__PARA__L2,__PARA__L3,__PARA__L4,__PARA__L5,__PARA__L6,__PARA__L7,__PARA__L8,__PARA__L9,__PIPE__L0,__PIPE__L1,__PIPE__L10,__PIPE__L2,__PIPE__L3,__PIPE__L4,__PIPE__L5,__PIPE__L6,__PIPE__L7,__PIPE__L8,__PIPE__L9,__TILE__L0,__TILE__L1,__TILE__L10,__TILE__L2,__TILE__L3,__TILE__L4,__TILE__L5,__TILE__L6,__TILE__L7,__TILE__L8,__TILE__L9as a JSON string. i.e., can be represented as {"pragma1": value1, "pragma2": value2, ...}
+--------------------------------------------------------------------------------
+```json
+{
+    "__PARA__L1": 13,
+    "__PARA__L10": 1,
+    "__PARA__L2": 26,
+    "__PARA__L3": 1,
+    "__PARA__L4": 1,
+    "__PARA__L5": 1,
+    "__PARA__L6": 1,
+    "__PARA__L7": 1,
+    "__PARA__L8": 1,
+    "__PARA__L9": 1,
+    "__PIPE__L0": "off",
+    "__PIPE__L1": "off",
+    "__PIPE__L10": "off",
+    "__PIPE__L2": "off",
+    "__PIPE__L3": "off",
+    "__PIPE__L4": "off",
+    "__PIPE__L5": "off",
+    "__PIPE__L6": "off",
+    "__PIPE__L7": "off",
+    "__PIPE__L8": "off",
+    "__PIPE__L9": "off",
+    "__TILE__L0": 1,
+    "__TILE__L1": 1,
+    "__TILE__L10": 1,
+    "__TILE__L2": 1,
+    "__TILE__L3": 1,
+    "__TILE__L4": 1,
+    "__TILE__L5": 1,
+    "__TILE__L6": 1,
+    "__TILE__L7": 1,
+    "__TILE__L8": 1,
+    "__TILE__L9": 1
+}
+```
