@@ -4,3 +4,6 @@ work_*
 
 __pycache__/
 *.pyc
+*.csv
+
+*.log

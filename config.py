@@ -1,22 +1,47 @@
 import os
 import dotenv
+import argparse
+
+from datetime import datetime
+DATE_STR = datetime.now().strftime("%Y%m%d_%H%M%S")
+# DATE_STR = "20241205_235746"
 
 # Load environment variables
 dotenv.load_dotenv()
 
+# parse arguments
+parser = argparse.ArgumentParser(description='DSE for HLS')
+parser.add_argument('--benchmark', type=str, default="cnn", help='benchmark name')
+args = parser.parse_args()
+
 # Control factors
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+DEVICE = os.getenv("DEVICE")
 DEBUG: bool = False
-BENCHMARK: str = "bradybench_19"
-WORK_DIR: str = f"{os.getenv("WORD_DIR")}/work_{BENCHMARK}"
+BENCHMARK: str = args.benchmark
+WORK_DIR: str = os.getenv("WORK_DIR") + f"/work_{BENCHMARK}_{DATE_STR}"
+OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 C_CODE_FILE: str = f"./data/{BENCHMARK}.c"
 CONFIG_FILE: str = f"./data/{BENCHMARK}.json"
 PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
-
 COMPILE_TIMEOUT: int = 40 * 60
 
 # DSE
 MAX_ITER = 10
+
+def print_config():
+	print(f"-"*80)
+	print(f"OPENAI_LOGFILE: {OPENAI_LOGFILE}")
+	print(f"DEVICE: {DEVICE}")
+	print(f"DEBUG: {DEBUG}")
+	print(f"BENCHMARK: {BENCHMARK}")
+	print(f"WORK_DIR: {WORK_DIR}")
+	print(f"C_CODE_FILE: {C_CODE_FILE}")
+	print(f"CONFIG_FILE: {CONFIG_FILE}")
+	print(f"PICKLE_FILE: {PICKLE_FILE}")
+	print(f"COMPILE_TIMEOUT: {COMPILE_TIMEOUT}")
+	print(f"MAX_ITER: {MAX_ITER}")
+	print(f"-"*80)
 
 # Prompts
 
@@ -29,6 +54,7 @@ MAKEFILE_STR = f"""
 VENDOR=XILINX
 #DEVICE=xilinx_aws-vu9p-f1-04261818_dynamic_5_0
 #DEVICE=xilinx_u250_xdma_201830_2
+DEVICE={DEVICE}
 
 #DEVICE=xilinx_vcu1525_xdma_201830_1
 # Host Code Compilation settings
