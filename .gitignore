@@ -6,10 +6,13 @@ __pycache__/
 *.pyc
 *.csv
 *.png
-
+*.txt
 *.log
 
 # results/
 !results/*.txt
 !results/*.csv
 !results/*.pdf
+
+!results1209/*.csv
+!results1209/*.pdf

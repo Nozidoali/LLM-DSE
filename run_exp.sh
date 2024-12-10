@@ -1,10 +1,11 @@
 #!/bin/bash
 folder_path=./data
+result_path=./results1209
 
 # mode="run"
 mode="harvest"
 
-date_str=20241206_062303
+date_str=20241209_115705
 work_dir=/scratch/hanyu
 
 while IFS= read -r c_file; do
@@ -18,8 +19,8 @@ while IFS= read -r c_file; do
         echo "Checking if work_${base_name}_${date_str} exists in /sratch/hanyu"
         if [ -d "${work_dir}/work_${base_name}_${date_str}" ]; then
             echo "work_${base_name}_${date_str} exists in /scratch/hanyu"
-            cp ${work_dir}/work_${base_name}_${date_str}/results.csv ./results/${base_name}.csv
-            cp ${work_dir}/work_${base_name}_${date_str}/openai.log ./results/${base_name}.txt
+            cp ${work_dir}/work_${base_name}_${date_str}/results.csv ./${result_path}/${base_name}.csv
+            cp ${work_dir}/work_${base_name}_${date_str}/openai.log ./${result_path}/${base_name}.txt
         else
             echo "work_${base_name}_${date_str} does not exist in /scratch/hanyu"
         fi

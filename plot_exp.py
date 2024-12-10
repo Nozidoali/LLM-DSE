@@ -1,4 +1,4 @@
-RESULT_DIR = "./results"
+RESULT_DIR = "./results1209"
 # MODE = "BEST_PERF"
 # MODE = "AGG_DATA"
 MODE = "PLOT_DSE"
@@ -45,11 +45,23 @@ def exclude_parathesis(s):
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "serif"
 BENCHMARKS_TO_PLOT = [
-    "bradybench_2",
-    "bradybench_18",
-    "bradybench_19"
+    # "bradybench_2",
+    # "bradybench_18",
+    # "bradybench_19"
+  "bradybench_0",
+  "bradybench_1",
+  "bradybench_2",
+  "bradybench_5",
+  "bradybench_7",
+  "bradybench_9",
+  "bradybench_16",
+  "bradybench_17",
+  "bradybench_18",
+  "bradybench_19",
 ]
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+WIDTH = 2
+ROWS = int(len(BENCHMARKS_TO_PLOT)/WIDTH)
+fig, axes = plt.subplots(ROWS, WIDTH, figsize=(WIDTH*5, ROWS*5))
 curr_ax = 0
 
 df = pd.DataFrame()
@@ -71,24 +83,27 @@ for bmark in BENCHMARK_SUITES:
         _df["Norm. Perf"] = np.log(_df["cycles"]/HARP_BASELINE[bmark]) + 1
         _df["Index"] =  _df["step"]
         _df = _df[_df["cycles"] != INT_MAX].sort_values("step")
-        axes[curr_ax].scatter(_df["Util. Ratio"], _df["Norm. Perf"], c="blue", s=50, marker="s")
+        
+        ax = axes[curr_ax//WIDTH, curr_ax%WIDTH]
+        
+        ax.scatter(_df["Util. Ratio"], _df["Norm. Perf"], c="blue", s=50, marker="s")
         # plot the arrow to indicate the trajectory based on the step
         for i in range(1, len(_df)):
-            axes[curr_ax].annotate("", xy=(_df["Util. Ratio"].iloc[i], _df["Norm. Perf"].iloc[i]), xytext=(_df["Util. Ratio"].iloc[i-1], _df["Norm. Perf"].iloc[i-1]), arrowprops=dict(arrowstyle="->, head_width=0.25, head_length=0.5", color="black", lw=1, ls="-", alpha=0.9, ))
+            ax.annotate("", xy=(_df["Util. Ratio"].iloc[i], _df["Norm. Perf"].iloc[i]), xytext=(_df["Util. Ratio"].iloc[i-1], _df["Norm. Perf"].iloc[i-1]), arrowprops=dict(arrowstyle="->, head_width=0.25, head_length=0.5", color="black", lw=1, ls="-", alpha=0.9, ))
         # plot step labels next to the data points
         # for i in range(len(_df)):
         #     plt.text(_df["Util. Ratio"].iloc[i], _df["Norm. Perf"].iloc[i], f"{_df['step'].iloc[i]}", fontsize=10)
-        axes[curr_ax].set_ylim(0, max(_df["Norm. Perf"])+1)
-        axes[curr_ax].axhline(y=1, color="blue", linestyle="--", lw=1)
-        axes[curr_ax].text(0.2, 1 + max(_df["Norm. Perf"])/100, "HARP's DSE Perf.", fontsize=10, rotation=0, color="blue")
-        axes[curr_ax].set_xlim(0, 1)
+        ax.set_ylim(0, max(_df["Norm. Perf"])+1)
+        ax.axhline(y=1, color="blue", linestyle="--", lw=1)
+        ax.text(0.2, 1 + max(_df["Norm. Perf"])/100, "HARP's DSE Perf.", fontsize=10, rotation=0, color="blue")
+        ax.set_xlim(0, 1)
         # plot a red hashline to indicate the 80% utilization
-        axes[curr_ax].axvline(x=0.8, color="red", linestyle="--", lw=1)
-        axes[curr_ax].text(0.8, max(_df["Norm. Perf"])/2, "80% Max. Util.", fontsize=10, rotation=270, color="red")
+        ax.axvline(x=0.8, color="red", linestyle="--", lw=1)
+        ax.text(0.8, max(_df["Norm. Perf"])/2, "80% Max. Util.", fontsize=10, rotation=270, color="red")
         
-        axes[curr_ax].set_xlabel("Utilization Ratio (Max. of LUT, DSP, FF, BRAM, URAM)")
-        axes[curr_ax].set_ylabel("Normalized Performance: log(#Cycles) + 1")
-        axes[curr_ax].set_title(f"{bmark}")
+        ax.set_xlabel("Utilization Ratio (Max. of LUT, DSP, FF, BRAM, URAM)")
+        ax.set_ylabel("Normalized Performance: log(#Cycles) + 1")
+        ax.set_title(f"{bmark}")
         curr_ax += 1
     elif MODE == "AGG_DATA":
         df = pd.concat([df, _df])
