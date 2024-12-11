@@ -16,4 +16,5 @@ def baseline_main():
             future.result()
             
 if __name__ == "__main__":
+    print_config()
     baseline_main()

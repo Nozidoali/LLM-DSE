@@ -11,7 +11,7 @@ dotenv.load_dotenv()
 
 # parse arguments
 parser = argparse.ArgumentParser(description='DSE for HLS')
-parser.add_argument('--benchmark', type=str, default="cnn", help='benchmark name')
+parser.add_argument('--benchmark', type=str, default="bradybench_17", help='benchmark name')
 args = parser.parse_args()
 
 # Control factors
@@ -24,10 +24,10 @@ OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 C_CODE_FILE: str = f"./data/{BENCHMARK}.c"
 CONFIG_FILE: str = f"./data/{BENCHMARK}.json"
 PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
-COMPILE_TIMEOUT: int = 40 * 60
+COMPILE_TIMEOUT: int = 40 * 60 * 2
 
 # DSE
-MAX_ITER = 50
+MAX_ITER = 5
 
 def print_config():
 	print(f"-"*80)

@@ -6,40 +6,25 @@ class Explorer():
     def __init__(self, c_code: str):
         self.c_code = c_code
         self.ds_config = compile_design_space(CONFIG_FILE)
-        self.designs = []
-        self.prune_space = {}
-        self.datas = []
-    def explore(self):
-        raise NotImplementedError
-    def record(self, i_step: int, merlin_rpt: str, design: dict):
-        results = parse_merlin_rpt(merlin_rpt)
-        results.update(design)
-        results["step"] = i_step
-        self.datas.append(results)
+        self.exploration_history, self.datas = [], []
+    def record(self, i_step: int, design: dict, hls_results: Dict[str, str], hls_warning: List[str]):
+        self.exploration_history.append([i_step, design, hls_results, hls_warning])
+        self.datas.append({"step": i_step, **hls_results, **design})
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)
-    
-class Idea0Explorer(Explorer):
+    def load_best_design(self):
+        prompt = compile_best_design_prompt(self.c_code, self.exploration_history)
+        index = retrieve_index_from_response(get_openai_response(prompt))
+        return self.exploration_history[index]
     def explore(self):
-        prompt_str = compile_prompt(WORK_DIR, self.c_code, CONFIG_FILE, self.designs)
-        extra_prompt = ""
-        while True:
-            response = get_openai_response(prompt_str + extra_prompt)
-            curr_design = retrieve_design_from_response(response)
-            extra_prompt = input("Waiting for human reponse \n\n\n")
-            if extra_prompt == "":
-                break
-        return curr_design
-      
-class Idea1Explorer(Explorer):
-    def explore(self, i_step: int):
-        best_design = self.designs[-1]
+        _, best_design, hls_results, hls_warning = self.load_best_design()
+        warning_analysis_prompt = compile_warning_analysis_prompt(self.c_code, hls_warning)
+        pragma_warnings = retrieve_dict_from_response(get_openai_response(warning_analysis_prompt))
         pragma_updates = []
-        merlin_rpt = os.path.join(WORK_DIR, str(i_step), "merlin.rpt")
-        self.record(i_step, merlin_rpt, best_design)
         for pragma_name in best_design.keys():
+            list_of_warning = pragma_warnings.get(pragma_name, [])
             pragma_type = "parallel" if "PARA" in pragma_name else "tile" if "TILE" in pragma_name else "pipeline"
-            update_prompt = compile_pragma_update_prompt(best_design, merlin_rpt, pragma_name, self.c_code, self.ds_config[pragma_name], pragma_type)
-            pragma_update = retrieve_design_from_response(get_openai_response(update_prompt))
+            update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, self.ds_config[pragma_name], pragma_type, list_of_warning)
+            pragma_update = retrieve_dict_from_response(get_openai_response(update_prompt))
             pragma_updates.append((pragma_name, pragma_update.get(pragma_name, None)))
-        prompt = compile_arbiter_prompt(best_design, merlin_rpt, pragma_updates, self.c_code)
-        return retrieve_design_from_response(get_openai_response(prompt))
+        prompt = compile_arbitrator_prompt(best_design, hls_results, pragma_updates, self.c_code)
+        return retrieve_dict_from_response(get_openai_response(prompt))
