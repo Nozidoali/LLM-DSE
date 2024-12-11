@@ -182,6 +182,7 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
         f"It means that the coarse-grained pipelining is not applied on loop 'L0' at line 33.",
         f"You should consider this warning when updating the pipeline pragma for loop 'L0', i.e., __PIPE__L0.",
         f"You must output a JSON string with the pragma name as the key and the list of original warnings as the value.",
+        f"You don't need to include all the warnings, only the ones that are relevant to the pragma.",
         f"Never output the reasoning and you must make sure the JSON string is valid.",
     ])
 

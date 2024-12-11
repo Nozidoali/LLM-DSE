@@ -20,7 +20,7 @@ class Explorer():
     
     def explore(self):
         _, best_design, hls_results, hls_warning = self.load_best_design()
-        warning_analysis_prompt = compile_warning_analysis_prompt(self.c_code, hls_warning)
+        warning_analysis_prompt = compile_warning_analysis_prompt(hls_warning, best_design.keys())
         pragma_warnings = retrieve_dict_from_response(get_openai_response(warning_analysis_prompt))
         pragma_updates = []
         for pragma_name in best_design.keys():
