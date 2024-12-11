@@ -4,7 +4,7 @@ import argparse
 
 from datetime import datetime
 DATE_STR = datetime.now().strftime("%Y%m%d_%H%M%S")
-DATE_STR = "20241210_184345"
+# DATE_STR = "20241210_184345"
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -25,6 +25,8 @@ C_CODE_FILE: str = f"./data/{BENCHMARK}.c"
 CONFIG_FILE: str = f"./data/{BENCHMARK}.json"
 PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
 COMPILE_TIMEOUT: int = 40 * 60 * 2
+
+if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 # DSE
 MAX_ITER = 5
