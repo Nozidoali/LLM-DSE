@@ -4,17 +4,20 @@ import pandas as pd
 
 class Explorer():
     def __init__(self, c_code: str):
-        self.c_code = c_code
+        self.c_code = rewrite_c_code(c_code)
         self.ds_config = compile_design_space(CONFIG_FILE)
         self.exploration_history, self.datas = [], []
+        
     def record(self, i_step: int, design: dict, hls_results: Dict[str, str], hls_warning: List[str]):
         self.exploration_history.append([i_step, design, hls_results, hls_warning])
         self.datas.append({"step": i_step, **hls_results, **design})
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)
+        
     def load_best_design(self):
         prompt = compile_best_design_prompt(self.c_code, self.exploration_history)
         index = retrieve_index_from_response(get_openai_response(prompt))
         return self.exploration_history[index]
+    
     def explore(self):
         _, best_design, hls_results, hls_warning = self.load_best_design()
         warning_analysis_prompt = compile_warning_analysis_prompt(self.c_code, hls_warning)

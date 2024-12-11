@@ -78,7 +78,7 @@ def retrieve_dict_from_response(response: str) -> dict:
     except Exception:
         print(f"WARNING: invalid response received {response}"); traceback.print_exc()
         return None
-    
+
 def retrieve_index_from_response(response: str) -> int:
     try:
         return int(response.strip())
@@ -160,7 +160,7 @@ def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the best design among the following options.",
         f"Here are the design space for the HLS pragmas:",
-        *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}" for i, (design, hls_results, _) in enumerate(exploration_history)],
+        *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}" for i, design, hls_results, _ in exploration_history],
         f"A design is better if it has lower cycle count and resource utilization under 80%.",
         f"When the cycle count is the same, you should choose the design with lower resource utilization.",
         f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
@@ -191,7 +191,7 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
         f"You must choose one and only one value among {all_options} other than {best_design[pragma_name]} that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80%.",
         f"Note that when: {format_design(best_design)}",
-        ("You must consider the following warnings when updating the pragma:", *hls_warnings) if hls_warnings != [] else "There are no warnings to consider when updating the pragma.",
+        (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""),
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
         f"To better decide the {pragma_type} factor, here are some knowledge about {pragma_type} pragmas:",
         *KNOWLEDGE_DATABASE[pragma_type],

@@ -4,7 +4,7 @@ import argparse
 
 from datetime import datetime
 DATE_STR = datetime.now().strftime("%Y%m%d_%H%M%S")
-# DATE_STR = "20241205_235746"
+DATE_STR = "20241210_184345"
 
 # Load environment variables
 dotenv.load_dotenv()
