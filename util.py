@@ -57,7 +57,7 @@ def get_openai_response(prompt, model="gpt-4o"):
             {"role": "system", "content": "You are an expert in design HLS codes."},
             {"role": "user", "content": prompt}
         ],
-        max_tokens=1000,  # Set the largest token numbers
+        max_tokens=10000,  # Set the largest token numbers
         temperature=0.7,  # Control the randomness of the generative result
     )
     open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response.choices[0].message.content)
@@ -68,7 +68,7 @@ def retrieve_code_from_response(response: str) -> str:
         return response.replace("```c++", "").replace("```", "").strip()
     except Exception:
         print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return None
+        return ""
 
 def retrieve_dict_from_response(response: str) -> dict:
     try:
@@ -77,7 +77,7 @@ def retrieve_dict_from_response(response: str) -> dict:
         return design
     except Exception:
         print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return None
+        return {}
 
 def retrieve_index_from_response(response: str) -> int:
     try:

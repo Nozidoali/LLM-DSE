@@ -1,11 +1,11 @@
 #!/bin/bash
 folder_path=./data
-result_path=./results1209
+result_path=./results1210
 
 # mode="run"
 mode="harvest"
 
-date_str=20241209_115705
+date_str=20241210_234843
 work_dir=/scratch/hanyu
 
 while IFS= read -r c_file; do

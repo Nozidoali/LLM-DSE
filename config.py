@@ -24,12 +24,13 @@ OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 C_CODE_FILE: str = f"./data/{BENCHMARK}.c"
 CONFIG_FILE: str = f"./data/{BENCHMARK}.json"
 PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
-COMPILE_TIMEOUT: int = 40 * 60 * 2
+COMPILE_TIMEOUT: int = 40 * 60
+ENABLE_CODE_ANAL_AGENT: bool = False
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 # DSE
-MAX_ITER = 5
+MAX_ITER = 50
 
 def print_config():
 	print(f"-"*80)

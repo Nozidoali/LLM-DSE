@@ -4,7 +4,7 @@ import pandas as pd
 
 class Explorer():
     def __init__(self, c_code: str):
-        self.c_code = rewrite_c_code(c_code)
+        self.c_code = rewrite_c_code(c_code) if ENABLE_CODE_ANAL_AGENT else c_code
         self.ds_config = compile_design_space(CONFIG_FILE)
         self.exploration_history, self.datas = [], []
         
