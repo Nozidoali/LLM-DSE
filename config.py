@@ -12,6 +12,7 @@ dotenv.load_dotenv()
 # parse arguments
 parser = argparse.ArgumentParser(description='DSE for HLS')
 parser.add_argument('--benchmark', type=str, default="bradybench_17", help='benchmark name')
+parser.add_argument('--folder', type=str, default="./data", help='folder name')
 args = parser.parse_args()
 
 # Control factors
@@ -21,10 +22,11 @@ DEBUG: bool = False
 BENCHMARK: str = args.benchmark
 WORK_DIR: str = os.getenv("WORK_DIR") + f"/work_{BENCHMARK}_{DATE_STR}"
 OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
-C_CODE_FILE: str = f"./data/{BENCHMARK}.c"
-CONFIG_FILE: str = f"./data/{BENCHMARK}.json"
-PICKLE_FILE: str = f"./data/{BENCHMARK}.pickle"
-COMPILE_TIMEOUT: int = 40 * 60
+C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
+CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
+PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
+COMPILE_TIMEOUT_MINUTES: int = 40
+COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
 ENABLE_CODE_ANAL_AGENT: bool = False
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)

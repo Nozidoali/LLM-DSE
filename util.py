@@ -10,6 +10,8 @@ import logging
 from typing import List, Dict, Union, Optional, Tuple
 from config import *
 import signal
+import time
+from datetime import timedelta
 
 def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
@@ -42,6 +44,7 @@ def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int
 def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
     merlin_rpt_file = os.path.join(make_dir, "merlin.rpt")
     merlin_log_file = os.path.join(make_dir, "merlin.log")
+    start = time.time()
     try:
         process = subprocess.Popen(f"cd {make_dir} && make clean && rm -rf .merlin_prj && make mcc_estimate 2>&1 > /dev/null", shell=True, preexec_fn = os.setsid)
         process.wait(timeout=COMPILE_TIMEOUT)
@@ -50,7 +53,9 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
         os.killpg(os.getpgid(process.pid), signal.SIGTERM)
         try: process.wait(5)
         except subprocess.TimeoutExpired: os.killpg(os.getpgid(process.pid), signal.SIGKILL)
-    return parse_merlin_rpt(merlin_rpt_file), parse_merlin_log(merlin_log_file)
+    elapsed = time.time() - start
+    minutes, seconds = divmod(int(elapsed), 60)
+    return {"compilation time": f"{minutes:02d}min {seconds:02d}sec", **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
 
 
 def get_openai_response(prompt, model="gpt-4o"):
@@ -100,7 +105,8 @@ KNOWLEDGE_DATABASE = {
         f"  (1) Parallel pragram will parallelize the first for loop in the c code under __PARA__.",
         f"  (2) Increasing the parallel factor will increase the resource utilization but improve the performance and decease the number of cycles (which is one of your target).",
         f"  (3) Increasing parallel factor roughly linearly increase the resource utilization within the loop it applies on, so you may scale the factor with respect to the ratio between current utilization with the 80% budget.",
-        f"  (4) Increasing the parallel factor will also increase the compilation time, you must decrease the parallel factor if you received the compilation timeout.",
+        f"  (4) Increasing the parallel factor will also increase the compilation time, you must decrease the parallel factor if you received the compilation timeout.", 
+        f"  (5) The compilation time is positively proportional to the parallel factor, you must choose the parallel factor such that the compilation time is under {COMPILE_TIMEOUT_MINUTES} minutes.",
     ], 
     'tile': [
         f"Here are some knowledge about the __TILE__LX pragma:",
@@ -193,7 +199,7 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
 def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str]) -> str:
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
-        f"You must choose one and only one value among {all_options} other than {best_design[pragma_name]} that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80%.",
+        f"You must choose one and only one value among {all_options} other than {best_design[pragma_name]} that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
         f"Note that when: {format_design(best_design)}",
         (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""),
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}", 
