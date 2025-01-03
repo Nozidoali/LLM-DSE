@@ -13,7 +13,7 @@ def llm_dse(c_code, config_file):
             merlin_res = run_merlin_compile(curr_dir)
         else:
             merlin_res = parse_merlin_rpt(os.path.join(curr_dir, "merlin.rpt")), parse_merlin_log(os.path.join(curr_dir, "merlin.log"))
-        explorer.record(i_steps, curr_design, *merlin_res)
+        explorer.record_history(i_steps, curr_design, *merlin_res)
         if i_steps >= MAX_ITER - 1: break
         curr_design = explorer.explore()
 

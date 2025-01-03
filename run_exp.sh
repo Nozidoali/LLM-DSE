@@ -5,8 +5,8 @@ result_path=./results1210
 # mode="run"
 mode="harvest"
 
-date_str=20241210_234843
 work_dir=/scratch/hanyu
+date_str=20241210_234843 # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)

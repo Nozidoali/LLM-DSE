@@ -15,6 +15,9 @@ def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
     return {p: config_dict[p]["default"] for p in config_dict}
 
+def designs_are_adjacent(design1: dict, design2: dict) -> bool:
+    return sum([design1[k] != design2[k] for k in design1.keys()]) == 1
+
 def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
     results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
     selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
@@ -187,13 +190,14 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
     ])
 
 
-def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str]) -> str:
+def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str]) -> str:
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
         f"You must choose one and only one value among {all_options} other than {best_design[pragma_name]} that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80%.",
         f"Note that when: {format_design(best_design)}",
         (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""),
-        f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
+        f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}", 
+        "\n".join([f"and when {pragma_name} is {k}, the results are: {v}" for k, v in exploration_history.items()]),
         f"To better decide the {pragma_type} factor, here are some knowledge about {pragma_type} pragmas:",
         *KNOWLEDGE_DATABASE[pragma_type],
         f"You must skip the reasoning and only output in JSON format string, i.e., {{{pragma_name}: value}}"
