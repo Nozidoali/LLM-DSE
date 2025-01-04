@@ -18,10 +18,10 @@ void kernel_syr2k(double alpha,double beta,double C[80][80],double A[80][60],dou
 #pragma ACCEL TILE FACTOR=auto{__TILE__L0}
   
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L0}
-  for (i = 0; i < 80; i++) {
+L0:   for (i = 0; i < 80; i++) {
     
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L1}
-    for (j = 0; j < 80; j++) {
+L1:     for (j = 0; j < 80; j++) {
       if (j <= i) {
         C[i][j] *= beta;
       }
@@ -32,10 +32,10 @@ void kernel_syr2k(double alpha,double beta,double C[80][80],double A[80][60],dou
 #pragma ACCEL TILE FACTOR=auto{__TILE__L2}
     
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L2}
-    for (k = 0; k < 60; k++) {
+L2:     for (k = 0; k < 60; k++) {
       
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L3}
-      for (j = 0; j < 80; j++) {
+L3:       for (j = 0; j < 80; j++) {
         if (j <= i) {
           C[i][j] += A[j][k] * alpha * B[i][k] + B[j][k] * alpha * A[i][k];
         }

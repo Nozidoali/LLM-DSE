@@ -1,23 +1,14 @@
-RESULT_DIR = "./results1210"
-# MODE = "BEST_PERF"
+import os
+
+RESULT_DIR = "./results0103"
+MODE = "BEST_PERF"
 # MODE = "AGG_DATA"
-MODE = "PLOT_DSE"
+# MODE = "PLOT_DSE"
 
+BASELINE_METHOD = "AutoDSE"
 
-BENCHMARK_SUITES = [
-#   "gemm-p",
-  "bradybench_0",
-  "bradybench_1",
-  "bradybench_2",
-  "bradybench_5",
-  "bradybench_7",
-  "bradybench_9",
-  "bradybench_16",
-  "bradybench_17",
-  "bradybench_18",
-  "bradybench_19",
-#   "cnn"
-]
+# find all the files in the RESULT_DIR
+BENCHMARK_SUITES = [os.path.basename(f).split('.')[0] for f in os.listdir(RESULT_DIR) if f.endswith(".txt")]
 
 HARP_BASELINE = {
     "bradybench_0": 39347,
@@ -30,6 +21,18 @@ HARP_BASELINE = {
     "bradybench_17": 5585,
     "bradybench_18": 6541,
     "bradybench_19": 2720791
+}
+
+HARP_BASELINE = {
+    '3mm': 128908,
+    'atax-medium': 88117,
+    'covariance': 22668,
+    'fdtd-2d': 15603,
+    'gemm-p': 9179,
+    'gemver-medium': 148606,
+    'jacobi-2d': 164284,
+    'symm-opt': 13277,
+    'syr2k': 45501
 }
 
 INT_MAX = 2**31 - 1
@@ -45,19 +48,10 @@ def exclude_parathesis(s):
 import matplotlib.pyplot as plt
 plt.rcParams["font.family"] = "serif"
 BENCHMARKS_TO_PLOT = [
-    # "bradybench_2",
-    # "bradybench_18",
-    # "bradybench_19"
-  "bradybench_0",
-#   "bradybench_1",
-#   "bradybench_2",
-  "bradybench_5",
-#   "bradybench_7",
-#   "bradybench_9",
-  "bradybench_16",
-  "bradybench_17",
-#   "bradybench_18",
-#   "bradybench_19",
+    "3mm",
+    "covariance",
+    "gemver-medium",
+    "syr2k",
 ]
 WIDTH = 2
 ROWS = int(len(BENCHMARKS_TO_PLOT)/WIDTH)
@@ -103,7 +97,7 @@ for bmark in BENCHMARK_SUITES:
         mid_x = (-0.1+max(max(_df["Util. Ratio"])+0.1,1))/2
         mid_y = (min(_df["Norm. Perf"])+max(_df["Norm. Perf"]))/2
         ax.text(0.8, mid_y, "80% Max. Util.", fontsize=10, rotation=270, color="red")
-        ax.text(mid_x, 1, "HARP's DSE Perf.", fontsize=10, rotation=0, color="blue")
+        ax.text(mid_x, 1, f"{BASELINE_METHOD}'s DSE Perf.", fontsize=10, rotation=0, color="blue")
         
         ax.set_xlabel("Utilization Ratio (Max. of LUT, DSP, FF, BRAM, URAM)")
         ax.set_ylabel("Normalized Performance: log(#Cycles) + 1")

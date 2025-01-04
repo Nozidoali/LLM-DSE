@@ -13,18 +13,18 @@ void kernel_3mm(int ni,int nj,int nk,int nl,int nm,double E[40][50],double A[40]
 #pragma ACCEL TILE FACTOR=auto{__TILE__L0}
   
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L0}
-  for (i = 0; i < 40; i++) {
+L0:   for (i = 0; i < 40; i++) {
     
 #pragma ACCEL PIPELINE auto{__PIPE__L3}
     
 #pragma ACCEL TILE FACTOR=auto{__TILE__L3}
     
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L3}
-    for (j = 0; j < 50; j++) {
+L3:     for (j = 0; j < 50; j++) {
       E[i][j] = 0.0;
       
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L6}
-      for (k = 0; k < 60; ++k) {
+L6:       for (k = 0; k < 60; ++k) {
         E[i][j] += A[i][k] * B[k][j];
       }
     }
@@ -36,18 +36,18 @@ void kernel_3mm(int ni,int nj,int nk,int nl,int nm,double E[40][50],double A[40]
 #pragma ACCEL TILE FACTOR=auto{__TILE__L1}
   
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L1}
-  for (i = 0; i < 50; i++) {
+L1:   for (i = 0; i < 50; i++) {
     
 #pragma ACCEL PIPELINE auto{__PIPE__L4}
     
 #pragma ACCEL TILE FACTOR=auto{__TILE__L4}
     
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L4}
-    for (j = 0; j < 70; j++) {
+L4:     for (j = 0; j < 70; j++) {
       F[i][j] = 0.0;
       
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L7}
-      for (k = 0; k < 80; ++k) {
+L7:       for (k = 0; k < 80; ++k) {
         F[i][j] += C[i][k] * D[k][j];
       }
     }
@@ -59,18 +59,18 @@ void kernel_3mm(int ni,int nj,int nk,int nl,int nm,double E[40][50],double A[40]
 #pragma ACCEL TILE FACTOR=auto{__TILE__L2}
   
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L2}
-  for (i = 0; i < 40; i++) {
+L2:   for (i = 0; i < 40; i++) {
     
 #pragma ACCEL PIPELINE auto{__PIPE__L5}
     
 #pragma ACCEL TILE FACTOR=auto{__TILE__L5}
     
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L5}
-    for (j = 0; j < 70; j++) {
+L5:     for (j = 0; j < 70; j++) {
       G[i][j] = 0.0;
       
 #pragma ACCEL PARALLEL FACTOR=auto{__PARA__L8}
-      for (k = 0; k < 50; ++k) {
+L8:       for (k = 0; k < 50; ++k) {
         G[i][j] += E[i][k] * F[k][j];
       }
     }

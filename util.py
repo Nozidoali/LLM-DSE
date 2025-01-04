@@ -215,7 +215,7 @@ def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pr
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high level synthesis (HLS), your task is to choose one of the following updates that {objective}",
         "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),
-        f"Note that when: {format_design(best_design)}",
+        f"The CURRENT DESIGN is: {format_design(best_design)}",
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
         f"To better understand the problem, ", 
         *KNOWLEDGE_DATABASE['general'],
@@ -223,7 +223,8 @@ def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pr
         *KNOWLEDGE_DATABASE['pipeline'],
         *KNOWLEDGE_DATABASE['tile'],
         f"To make better decision,", *KNOWLEDGE_DATABASE['arbitrator'],
-        f"Make the update to the current design and output only the new pragma design for the keys: " + ",".join(best_design.keys()) + "as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}",
+        f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(best_design.keys()) + "as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}",
+        f"Note that you must choose one and only one update, i.e., the new design only has one pragma different from the original one (CURRENT DESIGN).",
     ])
     
 
