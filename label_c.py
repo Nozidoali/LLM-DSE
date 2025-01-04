@@ -9,7 +9,7 @@ def label_c(file_in, file_out):
     while i < len(lines):
         line = lines[i].strip()
         if line.startswith('#pragma ACCEL') and any([x in line for x in ['PIPE', 'TILE', 'PARA']]):
-            label = re.search(r'auto\{(\w+)\}', line).group(1).split('_')[-1]
+            label = re.search(r'auto\{(\w+)\}', line).group(1).split('__')[-1]
             while i < len(lines) and not lines[i].strip().startswith('for'): i += 1
             if i < len(lines): lines[i] = f'{label}: {lines[i]}'
         i += 1
