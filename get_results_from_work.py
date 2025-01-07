@@ -1,5 +1,5 @@
 # retrieve the designs from the bradybench experiments
-RESULT_DIR = "/scratch/hanyu/work_bradybench_5_20241211_151312"
+RESULT_DIR = "/home/s41/project/cs259-llm-dse/work_bradybench_16_20241210_184345"
 
 import os
 import pandas as pd

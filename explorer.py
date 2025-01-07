@@ -34,4 +34,4 @@ class Explorer():
             pragma_update = retrieve_dict_from_response(get_openai_response(update_prompt))
             pragma_updates.append((pragma_name, pragma_update.get(pragma_name, None)))
         prompt = compile_arbitrator_prompt(best_design, hls_results, pragma_updates, self.c_code)
-        return retrieve_dict_from_response(get_openai_response(prompt))
+        return retrieve_list_from_response(get_openai_response(prompt))
