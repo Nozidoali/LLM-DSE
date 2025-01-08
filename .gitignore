@@ -1,4 +1,5 @@
 .env
+scripts/
 work/
 work_*
 scripts/

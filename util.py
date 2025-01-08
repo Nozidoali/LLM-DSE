@@ -137,7 +137,7 @@ KNOWLEDGE_DATABASE = {
         f"  (2) If you think all the parallel factors are already optimal, you consider pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
         f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the c code under __TILE__.",
         f"  (4) By default, setting __TILE__ to 1 is perferable.",
-        f"  (5) By default, setting __PIPE__ to 1 is perferable.",
+        f"  (5) By default, setting __PIPE__ to off is perferable.",
     ]
 }
 
