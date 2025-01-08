@@ -223,8 +223,9 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
 
 def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pragma_updates: List[tuple], c_code: str) -> str:
     objective = "optimize clock cycles the most." if hls_results != {} else "reduce the resource utilization and the compilation time."
+    n_designs: int = min(NUM_WORKERS, len(pragma_updates))
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high level synthesis (HLS), your task is to choose {NUM_WORKERS} single update from the following updates that {objective}",
+        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high level synthesis (HLS), your task is to choose {n_designs} single update from the following updates that {objective}",
         "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),
         f"The CURRENT DESIGN is: {format_design(best_design)}",
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
@@ -236,7 +237,7 @@ def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pr
         f"To make better decision,", *KNOWLEDGE_DATABASE['arbitrator'],
         f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(best_design.keys()) + "as a JSON string. i.e., can be represented as {\"pragma1\": value1, \"pragma2\": value2, ...}",
         # f"Note that you must choose one and only one update, i.e., the new design only has one pragma different from the original one (CURRENT DESIGN).",
-        f"Note that in total you should only output {NUM_WORKERS} JSON strings, which means {NUM_WORKERS} designs. For each one of them, the new design should only has one pragma different from the original one (CURRENT DESIGN).",
+        f"Note that in total you should only output {n_designs} JSON strings, which means {n_designs} designs. For each one of them, the new design should only has one pragma different from the original one (CURRENT DESIGN).",
     ])
     
 
