@@ -11,7 +11,7 @@ def llm_dse(c_code, config_file):
     while i_steps < MAX_ITER:
         print("-"*80 + f"\nStarting iteration {i_steps}")
         compile_args = [(WORK_DIR, explorer.c_code, design, i_steps + i) for i, design in enumerate(curr_design_list)]
-        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             merlin_results = list(executor.map(lambda args: eval_design(*args), compile_args))
         for i, (design, merlin_res) in enumerate(zip(curr_design_list, merlin_results)):
             explorer.record_history(i_steps + i, design, *merlin_res)

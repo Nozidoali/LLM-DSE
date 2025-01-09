@@ -25,9 +25,8 @@ class Explorer():
         return [self.exploration_history[index] for index in indices]
     
     def explore(self):
-        # _, best_design, hls_results, hls_warning = self.load_best_design()
-        best_designs = self.load_best_design()
-        for i, (i_step, best_design, hls_results, hls_warning) in enumerate(best_designs):
+        next_designs = []
+        for _, best_design, hls_results, hls_warning in self.load_best_design():
             warning_analysis_prompt = compile_warning_analysis_prompt(hls_warning, best_design.keys())
             pragma_warnings = retrieve_dict_from_response(get_openai_response(warning_analysis_prompt))
             pragma_updates = []
@@ -36,9 +35,7 @@ class Explorer():
                 exploration_history = self.load_history(best_design, pragma_name)
                 pragma_type = "parallel" if "PARA" in pragma_name else "tile" if "TILE" in pragma_name else "pipeline"
                 update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, self.ds_config[pragma_name], pragma_type, list_of_warnings, exploration_history)
-                pragma_update_list = retrieve_list_from_response(get_openai_response(update_prompt))
-                for pragma_update in pragma_update_list:
-                    pragma_updates.append((pragma_name, pragma_update.get(pragma_name, None)))
-        prompt = compile_arbitrator_prompt(best_design, hls_results, pragma_updates, self.c_code)
-        return [{**best_design, **chosen_update}
-            for chosen_update in retrieve_list_from_response(get_openai_response(prompt))]
+                pragma_updates.extend((pragma_name, update.get(pragma_name)) for update in retrieve_list_from_response(get_openai_response(update_prompt)))
+            prompt = compile_arbitrator_prompt(best_design, hls_results, pragma_updates, self.c_code)
+            next_designs.extend([{**best_design, **chosen_update} for chosen_update in retrieve_list_from_response(get_openai_response(prompt))])
+        return next_designs

@@ -38,9 +38,9 @@ if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 # DSE
 MAX_ITER = 4
-NUM_WORKERS = 3 * 4 * 2 # autoDSE setup
 NUM_BEST_DESIGNS = 2
 NUM_OPTIMIZATIONS = 3
+MAX_WORKERS = MAX_ITER * NUM_BEST_DESIGNS * NUM_OPTIMIZATIONS
 
 def print_config():
 	print(f"-"*80)
@@ -58,7 +58,6 @@ def print_config():
 	print(f"DATABASE_FILE: {DATABASE_FILE}")
 	print(f"DATABASE_IS_VALID: {DATABASE_IS_VALID}")
 	print(f"MAX_ITER: {MAX_ITER}")
-	print(f"NUM_WORKERS: {NUM_WORKERS}")
 	print(f"-"*80)
 
 # Prompts

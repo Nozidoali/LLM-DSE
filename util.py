@@ -228,8 +228,7 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
 
 
 def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str]) -> str:
-    n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1)
-    if pragma_type == "pipeline": n_optimizations = 1
+    n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1) if pragma_type != "pipeline" else 1
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
         f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]} that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
@@ -239,14 +238,13 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
         "\n".join([f"and when {pragma_name} is {k}, the results are: {v}" for k, v in exploration_history.items()]),
         f"To better decide the {pragma_type} factor, here are some knowledge about {pragma_type} pragmas:",
         *KNOWLEDGE_DATABASE[pragma_type],
-        f"You must skip the reasoning and only output in JSON format string, i.e., ```json{{{pragma_name}: value}}```",
-        f"Note that in total you should only output {n_optimizations} separate JSON strings, which means {n_optimizations} possible optimizations to {pragma_name}."
+        f"You must skip the reasoning and only output {n_optimizations} separate JSON strings  i.e., ```json{{{pragma_name}: value}}```, which holds {n_optimizations} possible values."
     ])
     
 
 def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pragma_updates: List[tuple], c_code: str) -> str:
     objective = "optimize clock cycles the most." if hls_results != {} else "reduce the resource utilization and the compilation time."
-    n_designs: int = min(NUM_WORKERS, len(pragma_updates))
+    n_designs: int = min(MAX_ITER * NUM_OPTIMIZATIONS, len(pragma_updates))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high level synthesis (HLS), your task is to choose {n_designs} single update from the following updates that {objective}",
         "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),
@@ -259,7 +257,6 @@ def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pr
         *KNOWLEDGE_DATABASE['tile'],
         f"To make better decision,", *KNOWLEDGE_DATABASE['arbitrator'],
         f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(best_design.keys()) + "as a JSON string. i.e., can be represented as ```json{\"pragma1\": value1, \"pragma2\": value2, ...}```",
-        # f"Note that you must choose one and only one update, i.e., the new design only has one pragma different from the original one (CURRENT DESIGN).",
         f"Note that in total you should only output {n_designs} separate JSON strings, which means {n_designs} designs. For each one of them, the new design should only has one pragma different from the original one (CURRENT DESIGN).",
     ])
     
