@@ -45,6 +45,7 @@ def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int
     open(c_path, 'w').write(curr_code)
     open(curr_dir + "Makefile", 'w').write(MAKEFILE_STR)
     open(mcc_common_dir + "mcc_common.mk", 'w').write(MCC_COMMON_STR)
+    time.sleep(5) # wait for the file to be written
     return curr_dir
 
 
@@ -53,7 +54,7 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
     merlin_log_file = os.path.join(make_dir, "merlin.log")
     start = time.time()
     try:
-        process = subprocess.Popen(f"cd {make_dir} && make clean && rm -rf .merlin_prj && make mcc_estimate 2>&1 > /dev/null", shell=True, preexec_fn = os.setsid)
+        process = subprocess.Popen(f"cd {make_dir} && make clean && rm -rf .merlin_prj 2>&1 > /dev/null && make mcc_estimate 2>&1 > /dev/null", shell=True, preexec_fn = os.setsid)
         process.wait(timeout=COMPILE_TIMEOUT)
     except subprocess.TimeoutExpired:
         print("Compilation Timeout. Killing the process group...")
@@ -77,9 +78,9 @@ def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tupl
             print(f"INFO: loaded from database {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
             return merlin_results, [] # warnings are not available
     make_dir: str = apply_design_to_code(work_dir, c_code, curr_design, idx)
-    merlin_result, merlin_log = run_merlin_compile(make_dir)
+    merlin_results, merlin_log = run_merlin_compile(make_dir)
     print(f"INFO: havest after compilation {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
-    return merlin_result, merlin_log
+    return merlin_results, merlin_log
 
 def get_openai_response(prompt, model="gpt-4o"):
     response = openai.chat.completions.create(
@@ -231,20 +232,21 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
     n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1) if pragma_type != "pipeline" else 1
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
-        f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]} that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
+        f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]} and values " + ", ".join([f"{k}" for k in exploration_history.keys()]) + ".",
+        f"that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
         f"Note that when: {format_design(best_design)}",
         (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""),
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}", 
         "\n".join([f"and when {pragma_name} is {k}, the results are: {v}" for k, v in exploration_history.items()]),
         f"To better decide the {pragma_type} factor, here are some knowledge about {pragma_type} pragmas:",
         *KNOWLEDGE_DATABASE[pragma_type],
-        f"You must skip the reasoning and only output {n_optimizations} separate JSON strings  i.e., ```json{{{pragma_name}: value}}```, which holds {n_optimizations} possible values."
+        f"You must skip the reasoning and only output {n_optimizations} separate JSON strings  i.e., ```json{{\"{pragma_name}\": value}}```, which holds {n_optimizations} possible values."
     ])
     
 
 def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pragma_updates: List[tuple], c_code: str) -> str:
     objective = "optimize clock cycles the most." if hls_results != {} else "reduce the resource utilization and the compilation time."
-    n_designs: int = min(MAX_ITER * NUM_OPTIMIZATIONS, len(pragma_updates))
+    n_designs: int = min(NUM_CHOSENS, len(pragma_updates))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high level synthesis (HLS), your task is to choose {n_designs} single update from the following updates that {objective}",
         "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),

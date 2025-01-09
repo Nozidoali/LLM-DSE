@@ -19,8 +19,6 @@ class Explorer():
     def load_best_design(self):
         prompt = compile_best_design_prompt(self.c_code, self.exploration_history)
         response = get_openai_response(prompt)
-        print(response)
-        # index = retrieve_index_from_response(response)
         indices = retrieve_indices_from_response(response)
         return [self.exploration_history[index] for index in indices]
     
