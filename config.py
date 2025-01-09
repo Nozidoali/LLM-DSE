@@ -35,6 +35,7 @@ if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 MAX_ITER = 4
 NUM_WORKERS = 3 * 4 * 2 # autoDSE setup
 NUM_BEST_DESIGNS = 2
+NUM_OPTIMIZATIONS = 3
 
 def print_config():
 	print(f"-"*80)
