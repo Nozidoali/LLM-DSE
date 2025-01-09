@@ -9,6 +9,8 @@ DATE_STR = datetime.now().strftime("%Y%m%d_%H%M%S")
 # Load environment variables
 dotenv.load_dotenv()
 
+DATABASE_FOLDER: str = "./data/compilation_results"
+
 # parse arguments
 parser = argparse.ArgumentParser(description='DSE for HLS')
 parser.add_argument('--benchmark', type=str, default="bradybench_17", help='benchmark name')
@@ -25,9 +27,12 @@ OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
 CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
 PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
+DATABASE_FILE: str = os.path.join(DATABASE_FOLDER, f"{BENCHMARK}.csv")
 COMPILE_TIMEOUT_MINUTES: int = 80
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
 ENABLE_CODE_ANAL_AGENT: bool = False
+ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip some useful warnings
+DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
@@ -48,6 +53,10 @@ def print_config():
 	print(f"CONFIG_FILE: {CONFIG_FILE}")
 	print(f"PICKLE_FILE: {PICKLE_FILE}")
 	print(f"COMPILE_TIMEOUT: {COMPILE_TIMEOUT}")
+	print(f"ENABLE_CODE_ANAL_AGENT: {ENABLE_CODE_ANAL_AGENT}")
+	print(f"ENABLE_DATABASE_LOOKUP: {ENABLE_DATABASE_LOOKUP}")
+	print(f"DATABASE_FILE: {DATABASE_FILE}")
+	print(f"DATABASE_IS_VALID: {DATABASE_IS_VALID}")
 	print(f"MAX_ITER: {MAX_ITER}")
 	print(f"NUM_WORKERS: {NUM_WORKERS}")
 	print(f"-"*80)
