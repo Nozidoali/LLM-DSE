@@ -25,7 +25,7 @@ OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
 CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
 PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
-COMPILE_TIMEOUT_MINUTES: int = 60
+COMPILE_TIMEOUT_MINUTES: int = 80
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
 ENABLE_CODE_ANAL_AGENT: bool = False
 
@@ -33,7 +33,7 @@ if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 # DSE
 MAX_ITER = 100
-NUM_WORKERS = 8
+NUM_WORKERS = 3 * 4 * 2 # autoDSE setup
 
 def print_config():
 	print(f"-"*80)

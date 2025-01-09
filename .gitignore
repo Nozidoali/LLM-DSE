@@ -1,6 +1,8 @@
 .env
+scripts/
 work/
 work_*
+scripts/
 
 __pycache__/
 *.pyc
