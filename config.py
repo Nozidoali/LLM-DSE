@@ -25,7 +25,7 @@ OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
 CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
 PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
-COMPILE_TIMEOUT_MINUTES: int = 40
+COMPILE_TIMEOUT_MINUTES: int = 60
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
 ENABLE_CODE_ANAL_AGENT: bool = False
 
@@ -47,6 +47,7 @@ def print_config():
 	print(f"PICKLE_FILE: {PICKLE_FILE}")
 	print(f"COMPILE_TIMEOUT: {COMPILE_TIMEOUT}")
 	print(f"MAX_ITER: {MAX_ITER}")
+	print(f"NUM_WORKERS: {NUM_WORKERS}")
 	print(f"-"*80)
 
 # Prompts
