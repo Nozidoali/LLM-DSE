@@ -17,6 +17,13 @@ def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
     return {p: config_dict[p]["default"] for p in config_dict}
 
+def format_design(design: dict) -> str:
+    return ", ".join([f"{k} = {v}" for k, v in design.items()])
+
+def format_results(results: dict) -> str:
+    if results == {}: return "Compilation Timeout."
+    return ", ".join([f"{k} = {v}" for k, v in results.items()])
+
 def designs_are_adjacent(design1: dict, design2: dict) -> bool:
     return sum([design1[k] != design2[k] for k in design1.keys()]) == 1
 
@@ -57,6 +64,22 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
     minutes, seconds = divmod(int(elapsed), 60)
     return {"compilation time": f"{minutes:02d}min {seconds:02d}sec", **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
 
+
+def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tuple[Dict[str, str], List[str]]:
+    if DATABASE_IS_VALID:
+        import pandas as pd
+        df = pd.read_csv(DATABASE_FILE)
+        matched_results = df[(df[list(curr_design.keys())] == pd.Series(curr_design)).all(axis=1)]
+        if len(matched_results) > 0:
+            datas = matched_results.drop(columns=list(curr_design.keys())).to_dict(orient='records')
+            merlin_results = {}
+            for data in datas: merlin_results.update(data)
+            print(f"INFO: loaded from database {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
+            return merlin_results, [] # warnings are not available
+    make_dir: str = apply_design_to_code(work_dir, c_code, curr_design, idx)
+    merlin_result, merlin_log = run_merlin_compile(make_dir)
+    print(f"INFO: havest after compilation {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
+    return merlin_result, merlin_log
 
 def get_openai_response(prompt, model="gpt-4o"):
     response = openai.chat.completions.create(
@@ -137,13 +160,6 @@ KNOWLEDGE_DATABASE = {
     ]
 }
 
-
-def format_design(design: dict) -> str:
-    return ", ".join([f"{k} is {v}" for k, v in design.items()])
-
-def format_results(results: dict) -> str:
-    if results == {}: return "Compilation Timeout."
-    return ", ".join([f"{k} is {v}" for k, v in results.items()])
 
 def rewrite_c_code(c_code: str) -> str:
     code_rewrite_prompt = "\n".join([
