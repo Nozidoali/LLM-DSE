@@ -2,8 +2,8 @@
 folder_path=./data/lad25
 result_path=./results0105
 
-# mode="run"
-mode="harvest"
+mode="run"
+# mode="harvest"
 
 work_dir=/scratch/hanyu
 date_str=20250103_220010 # for harvest

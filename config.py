@@ -32,7 +32,7 @@ ENABLE_CODE_ANAL_AGENT: bool = False
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 # DSE
-MAX_ITER = 100
+MAX_ITER = 500
 NUM_WORKERS = 3 * 4 * 2 # autoDSE setup
 
 def print_config():

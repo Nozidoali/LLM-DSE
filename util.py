@@ -89,11 +89,7 @@ def retrieve_dict_from_response(response: str) -> dict:
 
 def retrieve_list_from_response(response: str) -> List[dict]:
     try:
-        pattern = r'```json\s*(.*?)\s*```'
-        matches = re.findall(pattern, response, re.DOTALL)
-        designs = [json.loads(match) for match in matches]
-        assert len(designs) == NUM_WORKERS
-        return designs
+        return [json.loads(match) for match in re.findall(r'```json\s*(.*?)\s*```', response, re.DOTALL)]
     except Exception:
         print(f"WARNING: invalid response received {response}"); traceback.print_exc()
         return {}
