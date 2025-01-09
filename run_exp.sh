@@ -1,5 +1,5 @@
 #!/bin/bash
-folder_path=./data/test
+folder_path=./data/lad25
 result_path=./results0105
 
 mode="run"
@@ -13,7 +13,7 @@ while IFS= read -r c_file; do
     echo "Found: $base_name"
     if [ "$mode" == "run" ]; then
         echo "Running $base_name"
-        python3 main.py --benchmark "$base_name" --folder "$folder_path"
+        python3 main.py --benchmark "$base_name" --folder "$folder_path" &
     fi
     if [ "$mode" == "harvest" ]; then
         echo "Checking if work_${base_name}_${date_str} exists in ${work_dir}"

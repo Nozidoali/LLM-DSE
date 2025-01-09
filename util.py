@@ -21,7 +21,7 @@ def format_design(design: dict) -> str:
     return ", ".join([f"{k} = {v}" for k, v in design.items()])
 
 def format_results(results: dict) -> str:
-    if results == {}: return "Compilation Timeout."
+    if results == {} or "cycles" not in results or results["cycles"] == "": return "Compilation Timeout."
     return ", ".join([f"{k} = {v}" for k, v in results.items()])
 
 def designs_are_adjacent(design1: dict, design2: dict) -> bool:
