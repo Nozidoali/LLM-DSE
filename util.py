@@ -63,6 +63,10 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
         try: process.wait(5)
         except subprocess.TimeoutExpired: os.killpg(os.getpgid(process.pid), signal.SIGKILL)
     elapsed = time.time() - start
+    if os.path.exists(os.path.join(make_dir, ".merlin_prj")): subprocess.run(f"rm -rf {os.path.join(make_dir, '.merlin_prj')}", shell=True)
+    if os.path.exists(os.path.join(make_dir, "top.mco")): subprocess.run(f"rm -f {os.path.join(make_dir, 'top.mco')}", shell=True)
+    subprocess.run(f"rm -f {os.path.join(make_dir, '*.zip')}", shell=True)
+    time.sleep(10) # wait for the file to be written
     minutes, seconds = divmod(int(elapsed), 60)
     return {"compilation time": f"{minutes:02d}min {seconds:02d}sec", **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
 
@@ -202,7 +206,10 @@ def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
         f"Here are the design space for the HLS pragmas:",
-        *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}" for i, design, hls_results, _ in exploration_history],
+        *[
+            f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}"
+            for i, (_, design, hls_results, _) in enumerate(exploration_history)
+        ],
         f"A design is better if it has lower cycle count and resource utilization under 80%.",
         f"When the cycle count is the same, you should choose the design with lower resource utilization.",
         f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
