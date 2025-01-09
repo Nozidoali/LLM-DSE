@@ -32,8 +32,9 @@ ENABLE_CODE_ANAL_AGENT: bool = False
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 # DSE
-MAX_ITER = 100
+MAX_ITER = 4
 NUM_WORKERS = 3 * 4 * 2 # autoDSE setup
+NUM_BEST_DESIGNS = 2
 
 def print_config():
 	print(f"-"*80)

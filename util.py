@@ -105,6 +105,13 @@ def retrieve_index_from_response(response: str) -> int:
         print(f"WARNING: invalid response received {response}"); traceback.print_exc()
         return None
     
+def retrieve_indices_from_response(response: str) -> List[int]:
+    try:
+        return [int(x) for x in response.strip().split(",")]
+    except Exception:
+        print(f"WARNING: invalid response received {response}"); traceback.print_exc()
+        return None
+    
 KNOWLEDGE_DATABASE = {
     'general': [
         f"Here are some knowledge about the HLS pragmas you are encountering:",
@@ -178,7 +185,7 @@ def rewrite_c_code(c_code: str) -> str:
 
 def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the best design among the following options.",
+        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {NUM_BEST_DESIGNS} best designs among the following options.",
         f"Here are the design space for the HLS pragmas:",
         *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}" for i, design, hls_results, _ in exploration_history],
         f"A design is better if it has lower cycle count and resource utilization under 80%.",
@@ -186,8 +193,8 @@ def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
         f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
         f"When the performance are similar, you should choose the design with more room for improvement.",
         f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.",
-        f"You never output the reasoning, only the index of the best design.",
-        f"You must output only an integer value between {range(len(exploration_history))} representing the best design among the following options.",
+        f"You never output the reasoning, only the indices of the best designs.",
+        f"You must output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {NUM_BEST_DESIGNS} best design among the following options.",
     ])
     
 

@@ -1,9 +1,9 @@
 #!/bin/bash
-folder_path=./data/lad25
+folder_path=./data/test
 result_path=./results0105
 
-# mode="run"
-mode="harvest"
+mode="run"
+# mode="harvest"
 
 work_dir=/scratch/hanyu
 date_str=20250103_220010 # for harvest
@@ -13,7 +13,7 @@ while IFS= read -r c_file; do
     echo "Found: $base_name"
     if [ "$mode" == "run" ]; then
         echo "Running $base_name"
-        python3 main.py --benchmark "$base_name" --folder "$folder_path" &
+        python3 main.py --benchmark "$base_name" --folder "$folder_path"
     fi
     if [ "$mode" == "harvest" ]; then
         echo "Checking if work_${base_name}_${date_str} exists in ${work_dir}"
