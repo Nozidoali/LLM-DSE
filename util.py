@@ -37,7 +37,8 @@ def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int
     curr_dir = os.path.join(work_dir, f"{idx}/")
     curr_src_dir = os.path.join(curr_dir, "src/")
     mcc_common_dir = os.path.join(work_dir, "mcc_common/")
-    [os.mkdir(d) for d in [work_dir, curr_dir, curr_src_dir, mcc_common_dir] if not os.path.exists(d)]
+    [os.mkdir(d) for d in [work_dir, curr_dir, curr_src_dir] if not os.path.exists(d)]
+    os.makedirs(mcc_common_dir, exist_ok=True)
     c_path = os.path.join(curr_src_dir, f"{KERNEL_NAME}.c")
     curr_code: str = c_code
     for key, value in curr_design.items():
