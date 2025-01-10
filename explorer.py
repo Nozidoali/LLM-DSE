@@ -35,5 +35,5 @@ class Explorer():
                 update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, self.ds_config[pragma_name], pragma_type, list_of_warnings, exploration_history)
                 pragma_updates.extend((pragma_name, update.get(pragma_name)) for update in retrieve_list_from_response(get_openai_response(update_prompt)))
             prompt = compile_arbitrator_prompt(best_design, hls_results, pragma_updates, self.c_code)
-            next_designs.extend([{**best_design, **chosen_update} for chosen_update in retrieve_list_from_response(get_openai_response(prompt))])
+            next_designs.extend([{**best_design, **chosen_update} for chosen_update in retrieve_list_from_response(get_openai_response(prompt)) if {**best_design, **chosen_update} not in next_designs])
         return next_designs
