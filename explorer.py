@@ -10,7 +10,7 @@ class Explorer():
         
     def record_history(self, i_step: int, design: dict, hls_results: Dict[str, str], hls_warning: List[str]):
         self.exploration_history.append([i_step, design, hls_results, hls_warning])
-        self.datas.append({"step": i_step, **hls_results, **design})
+        self.datas.append({**hls_results, **design, "step": i_step})
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)
     
     def load_history(self, design: dict, pragma_name: str) -> Dict[str, str]:
