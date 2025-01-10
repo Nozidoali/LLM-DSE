@@ -28,13 +28,15 @@ C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
 CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
 PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
 DATABASE_FILE: str = os.path.join(DATABASE_FOLDER, f"{BENCHMARK}.csv")
-COMPILE_TIMEOUT_MINUTES: int = 80
+COMPILE_TIMEOUT_MINUTES: int = 60
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
 ENABLE_CODE_ANAL_AGENT: bool = False
 ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip some useful warnings
 DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
+
+GPT_MODEL = "gpt-4o-mini" # "gpt-4o-mini" or "gpt-4o"
 
 # DSE
 MAX_ITER = 500

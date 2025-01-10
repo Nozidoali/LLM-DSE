@@ -64,7 +64,7 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
         except subprocess.TimeoutExpired: os.killpg(os.getpgid(process.pid), signal.SIGKILL)
     elapsed = time.time() - start
     if os.path.exists(os.path.join(make_dir, ".merlin_prj")): subprocess.run(f"rm -rf {os.path.join(make_dir, '.merlin_prj')}", shell=True)
-    if os.path.exists(os.path.join(make_dir, "top.mco")): subprocess.run(f"rm -f {os.path.join(make_dir, 'top.mco')}", shell=True)
+    if os.path.exists(os.path.join(make_dir, f"{KERNEL_NAME}.mco")): subprocess.run(f"rm -f {os.path.join(make_dir, f"{KERNEL_NAME}.mco")}", shell=True)
     subprocess.run(f"rm -f {os.path.join(make_dir, '*.zip')}", shell=True)
     time.sleep(10) # wait for the file to be written
     minutes, seconds = divmod(int(elapsed), 60)
@@ -87,7 +87,7 @@ def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tupl
     print(f"INFO: havest after compilation {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
     return merlin_results, merlin_log
 
-def get_openai_response(prompt, model="gpt-4o"):
+def get_openai_response(prompt, model=GPT_MODEL) -> str:
     response = openai.chat.completions.create(
         model=model,
         messages=[

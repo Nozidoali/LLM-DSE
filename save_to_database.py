@@ -7,6 +7,8 @@ result_folders = [
     'results0103',
     'results0104',
     'results0108',
+    'results0109',
+    'results0110',
 ]
 database_folder = './data/compilation_results'
 
@@ -29,6 +31,6 @@ if __name__ == '__main__':
         df = df.drop(columns=['step'])
         pragma_names = [col for col in df.columns if pragma_pattern.search(col)]
         df = df[[col for col in df.columns if pattern.search(col)]]
-        df = df[~(df['cycles'].isna() & ~df['compilation time'].isin(['40min 00sec', '80min 00sec']))]
+        df = df[~(df['cycles'].isna() & ~df['compilation time'].isin(['40min 00sec', '60min 00sec', '80min 00sec']))]
         df = df.dropna(subset=pragma_names)        
         df.to_csv(os.path.join(database_folder, f'{bmark}.csv'), index=False)
