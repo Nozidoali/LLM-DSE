@@ -27,11 +27,11 @@ if __name__ == '__main__':
     for bmark, df in dfs.items():
         if os.path.exists(os.path.join(database_folder, f'{bmark}.csv')):
             df = pd.concat([df, pd.read_csv(os.path.join(database_folder, f'{bmark}.csv'))])
-        df = df.drop_duplicates()
         # drop the column called step
         df = df.drop(columns=['step'])
         pragma_names = [col for col in df.columns if pragma_pattern.search(col)]
         df = df[[col for col in df.columns if pattern.search(col)]]
         df = df[~(df['cycles'].isna() & ~df['compilation time'].isin(['40min 00sec', '60min 00sec', '80min 00sec']))]
         df = df.dropna(subset=pragma_names)        
+        df = df.drop_duplicates()
         df.to_csv(os.path.join(database_folder, f'{bmark}.csv'), index=False)
