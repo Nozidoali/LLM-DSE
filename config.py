@@ -36,7 +36,7 @@ DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FIL
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
-GPT_MODEL = "gpt-4o-mini" # "gpt-4o-mini" or "gpt-4o"
+GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 
 # DSE
 MAX_ITER = 500

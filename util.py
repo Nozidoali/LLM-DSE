@@ -64,7 +64,7 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
         except subprocess.TimeoutExpired: os.killpg(os.getpgid(process.pid), signal.SIGKILL)
     elapsed = time.time() - start
     if os.path.exists(os.path.join(make_dir, ".merlin_prj")): subprocess.run(f"rm -rf {os.path.join(make_dir, '.merlin_prj')}", shell=True)
-    if os.path.exists(os.path.join(make_dir, f"{KERNEL_NAME}.mco")): subprocess.run(f"rm -f {os.path.join(make_dir, f"{KERNEL_NAME}.mco")}", shell=True)
+    if os.path.exists(os.path.join(make_dir, f"{KERNEL_NAME}.mco")): subprocess.run("rm -f " + os.path.join(make_dir, f"{KERNEL_NAME}.mco"), shell=True)
     subprocess.run(f"rm -f {os.path.join(make_dir, '*.zip')}", shell=True)
     time.sleep(10) # wait for the file to be written
     minutes, seconds = divmod(int(elapsed), 60)
@@ -201,7 +201,7 @@ def rewrite_c_code(c_code: str) -> str:
     return retrieve_code_from_response(get_openai_response(code_rewrite_prompt))
 
 
-def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
+def compile_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
@@ -214,7 +214,9 @@ def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
         f"When the cycle count is the same, you should choose the design with lower resource utilization.",
         f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
         f"When the performance are similar, you should choose the design with more room for improvement.",
-        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.",
+        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
+        f"Note that in the exploration history, we have chosen the following indices as the best designs: " + ", ".join([str(idx) for idx in best_design_history]), 
+        f"You are encouraged to choose the best designs that are not in the best design history.",
         f"You never output the reasoning, only the indices of the best designs.",
         f"You must output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
     ])
@@ -222,16 +224,17 @@ def compile_best_design_prompt(c_code: str, exploration_history: list) -> str:
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:
     return "\n".join([
-        f"Based on the HLS compilation log, there are some warnings that you should be aware of:",
-        *warnings,
         f"You must decide for each pragma below a list of warnings that you should consider when updating the pragma.",
-        *pragma_names,
         f"For example, if you have the following warnings:",
-        f"WARNING: [CGPIP-208] Coarse-grained pipelining NOT applied on loop 'L0' (top.c:33)",
-        f"It means that the coarse-grained pipelining is not applied on loop 'L0' at line 33.",
-        f"You should consider this warning when updating the pipeline pragma for loop 'L0', i.e., __PIPE__L0.",
+        f"WARNING: [CGPIP-208] Coarse-grained pipelining NOT applied on loop 'Lx' (top.c:YY)",
+        f"It means that the coarse-grained pipelining is not applied on loop 'Lx' at line YY.",
+        f"In this example, you should consider this warning when updating the pipeline pragma for loop 'Lx', i.e., __PIPE__Lx.",
+        f"Based on the HLS compilation log, there are some warnings that you should assign to pragmas:",
+        "\n".join([f"\t{i}. {warning}" for i, warning in enumerate(warnings)]),
+        f"The list of pragmas are:",
+        "\n".join([f"\t{i}. {pragma_name}" for i, pragma_name in enumerate(pragma_names)]),
         f"You must output a JSON string with the pragma name as the key and the list of original warnings as the value.",
-        f"You don't need to include all the warnings, only the ones that are relevant to the pragma.",
+        f"You don't need to include all the warnings, only the ones that are relevant to a pragma.",
         f"Never output the reasoning and you must make sure the JSON string is valid.",
     ])
 
@@ -243,16 +246,17 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
         f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]} and values " + ", ".join([f"{k}" for k in exploration_history.keys()]) + ".",
         f"that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
         f"Note that when: {format_design(best_design)}",
-        (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""),
+        (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""), 
+        f"If the warning suggests the pragma is not applied due to dependency or other reasons, you could decide to skip the pragma update by outputting empty string.",
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}", 
         "\n".join([f"and when {pragma_name} is {k}, the results are: {v}" for k, v in exploration_history.items()]),
         f"To better decide the {pragma_type} factor, here are some knowledge about {pragma_type} pragmas:",
         *KNOWLEDGE_DATABASE[pragma_type],
-        f"You must skip the reasoning and only output {n_optimizations} separate JSON strings  i.e., ```json{{\"{pragma_name}\": value}}```, which holds {n_optimizations} possible values."
+        f"You must skip the reasoning and only output at most {n_optimizations} separate JSON strings  i.e., ```json{{\"{pragma_name}\": value}}```, which holds {n_optimizations} different values."
     ])
     
 
-def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pragma_updates: List[tuple], c_code: str) -> str:
+def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], list_of_warnings: List[str], pragma_updates: List[tuple], c_code: str) -> str:
     objective = "optimize clock cycles the most." if hls_results != {} else "reduce the resource utilization and the compilation time."
     n_designs: int = min(NUM_CHOSENS, len(pragma_updates))
     return "\n".join([
@@ -260,6 +264,7 @@ def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], pr
         "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),
         f"The CURRENT DESIGN is: {format_design(best_design)}",
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
+        f"The list of warnings are:\n" + "\n".join(list_of_warnings),
         f"To better understand the problem, ", 
         *KNOWLEDGE_DATABASE['general'],
         *KNOWLEDGE_DATABASE['parallel'],
@@ -284,7 +289,7 @@ def parse_merlin_rpt(merlin_rpt: str) -> Dict[str, str]:
 
 def parse_merlin_log(input_file) -> List[str]:
     if not os.path.exists(input_file): return []
-    return [l for l in open(input_file, "r").readlines() if "WARNING" in l]
+    return [l.strip() for l in open(input_file, "r").readlines() if "WARNING" in l]
 
 
 def _parse_options(pragma_name: str, options: str) -> List[str]:
