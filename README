@@ -10,7 +10,7 @@ Apptainer> source run.sh
 Getting started: before running the script, you need to put the OPENAI API key in the `.env` file.
 ```bash
 pip install -r requirements.txt
-python llm.py
+python main.py --benchmark <name, e.g.: 3mm> --folder <data_dir, e.g.: ./data/lad25>
 ```
 
 Trouble shooting:
