@@ -1,7 +1,0 @@
-cycles,lut utilization,FF utilization,BRAM utilization,DSP utilization,URAM utilization,__PIPE__L0,__PIPE__L1,__PIPE__L2,__PIPE__L3,__PIPE__L5,__PIPE__L6,__PIPE__L7,__TILE__L0,__TILE__L1,__TILE__L2,__TILE__L5,__TILE__L6,step
-532969 (2.132ms),11610 (~0%),8012 (~0%),66 (1%),7 (~0%),2 (~0%),off,off,off,off,off,off,off,1,1,1,1,1,0
-,,,,,,off,off,off,flatten,off,off,off,1,1,1,1,1,1
-,,,,,,off,,off,flatten,off,off,off,1,1,1,1,1,2
-,,,,,,flatten,,off,flatten,off,off,off,1,1,1,1,1,3
-,,,,,,flatten,flatten,off,flatten,off,off,off,1,1,1,1,1,4
-,,,,,,flatten,flatten,flatten,flatten,flatten,off,off,1,1,8,1,1,5

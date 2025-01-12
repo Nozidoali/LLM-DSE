@@ -161,15 +161,15 @@ KNOWLEDGE_DATABASE = {
         f"  (1) Pipeline pragma will affect MULTIPLE loops under __PIPE__.",
         f"  (2) The flatten option will unroll all the for loops (which means putting __PARA__ equals to the loop bound in the for loop) under this pragma.",
         f"  (3) Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
-        f"  (4) Choosing the empty string means coars-grained pipelining, which is useful when you believe the loop inside it has fewer loop-carried dependencies.",
+        f"  (4) Choosing the empty string means coarse-grained pipelining, which increase (roughly double) the resource utilization of the for loop's module but potentially improve the performance (reducing cycle count).",
     ],
     'arbitrator': [
         f"Here are some information about the preference:",
         f"  (1) You should prioritize optimizing the __PARA__ pragma first, as it affect the performance the most.",
         f"  (2) If you think all the parallel factors are already optimal, you consider pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
         f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the c code under __TILE__.",
-        f"  (4) By default, setting __TILE__ to 1 is perferable.",
-        f"  (5) By default, setting __PIPE__ to off is perferable.",
+        f"  (4) By default, setting __TILE__ to 1 is preferable.",
+        f"  (5) By default, setting __PIPE__ to off is preferable.",
     ]
 }
 

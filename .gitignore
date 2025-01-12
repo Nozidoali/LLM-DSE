@@ -10,13 +10,6 @@ __pycache__/
 *.png
 *.txt
 *.log
+*.pdf
 
 !data/compilation_results/*.csv
-
-# results/
-!results/*.txt
-!results/*.csv
-!results/*.pdf
-
-!results1209/*.csv
-!results1209/*.pdf
