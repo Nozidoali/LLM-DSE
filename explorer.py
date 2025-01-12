@@ -3,11 +3,12 @@ from util import *
 import pandas as pd
 
 class Explorer():
-    def __init__(self, c_code: str):
+    def __init__(self, c_code: str, pragma_names: List[str]):
         self.c_code = rewrite_c_code(c_code) if ENABLE_CODE_ANAL_AGENT else c_code
         self.ds_config = compile_design_space(CONFIG_FILE)
         self.exploration_history, self.datas = [], []
         self.best_design_history = []
+        self.pragma_names: List[str] = list(pragma_names)[:]
         
     def record_history(self, i_step: int, design: dict, hls_results: Dict[str, str], hls_warning: List[str]):
         self.exploration_history.append([i_step, design, hls_results, hls_warning])
@@ -17,8 +18,13 @@ class Explorer():
     def load_history(self, design: dict, pragma_name: str) -> Dict[str, str]:
         return {x[1][pragma_name]: format_results(x[2]) for x in self.exploration_history if designs_are_adjacent(x[1], design) and x[1][pragma_name] != design[pragma_name]}
     
+    def num_remaining_design_space(self, design: dict) -> int:
+        num_total, num_explored = lambda x: len(self.ds_config[x]), lambda x: len(self.load_history(design, x))
+        return sum((num_total(pragma_name) - num_explored(pragma_name) for pragma_name in self.pragma_names))
+            
     def select_best_designs(self):
-        prompt = compile_best_design_prompt(self.c_code, self.exploration_history, self.best_design_history)
+        best_design_data = {i: {"remaining space": self.num_remaining_design_space(design)} for i, (_, design, _, _) in enumerate(self.exploration_history)}
+        prompt = compile_best_design_prompt(self.c_code, self.exploration_history, self.best_design_history, best_design_data)
         response = get_openai_response(prompt)
         return retrieve_indices_from_response(response)
     

@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 def llm_dse(c_code, config_file):
     curr_design_list = [get_default_design(config_file)]
-    explorer = Explorer(c_code)
+    explorer = Explorer(c_code, curr_design_list[0].keys())
     i_steps = 0
     while i_steps < MAX_ITER:
         print("-"*80 + f"\nStarting iteration {i_steps}")
