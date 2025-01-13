@@ -63,48 +63,49 @@ def print_config():
 
 # Prompts
 KNOWLEDGE_DATABASE = {
-    'general': [
-        f"Here are some knowledge about the HLS pragmas you are encountering:",
-        f"  (1) The pragmas only affect the next for loop after the pragma.",
-        f"  (2) The pragmas are __PARA__LX, __PIPE__LX, and __TILE__LX, where LX is the loop name and X is an integer.",
-    ],
-    'best_design': [
-		f"Here are some information about the best design:",
-        f"A design is performance-wise better if it has lower cycle count and resource utilization under 80%.",
-        f"When the cycle count is the same, you should choose the design with lower resource utilization.",
-        f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
-        f"When the performance are similar, you should choose the design with more room for improvement.",
-        f"Beyond all the metrics, you should avoid choosing the design that has not been exhaustively explored (i.e., has fewer remaining search space left).", 
-        f"You are encouraged to choose one design that has results Compilation Timeout if there is any.",
- 	], 
-    'parallel': [
-        f"Here are some knowledge about the __PARA__LX pragma:",
-        f"  (1) Parallel pragram will parallelize the first for loop in the c code under __PARA__.",
-        f"  (2) Increasing the parallel factor will increase the resource utilization but improve the performance and decease the number of cycles (which is one of your target).",
-        f"  (3) Increasing parallel factor roughly linearly increase the resource utilization within the loop it applies on, so you may scale the factor with respect to the ratio between current utilization with the 80% budget.",
-        f"  (4) Increasing the parallel factor will also increase the compilation time, you must decrease the parallel factor if you received the compilation timeout.", 
-        f"  (5) The compilation time is positively proportional to the parallel factor, you must choose the parallel factor such that the compilation time is under {COMPILE_TIMEOUT_MINUTES} minutes.",
-    ], 
-    'tile': [
-        f"Here are some knowledge about the __TILE__LX pragma:",
-        f"  (1) Tile pragma will tile the first for loop in the c code under __TILE__.",
-        f"  (2) Increasing the tile factor will reduce the memory transfer cycles because it will restrict the memory transfer.",
-    ],
-    'pipeline': [
-        f"Here are some knowledge about the __PIPE__LX pragma:",
-        f"  (1) Pipeline pragma will affect MULTIPLE loops under __PIPE__.",
-        f"  (2) The flatten option will unroll all the for loops (which means putting __PARA__ equals to the loop bound in the for loop) under this pragma.",
-        f"  (3) Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
-        f"  (4) Choosing the empty string means coarse-grained pipelining, which increase (roughly double) the resource utilization of the for loop's module but potentially improve the performance (reducing cycle count).",
-    ],
-    'arbitrator': [
-        f"Here are some information about the preference:",
-        f"  (1) You should prioritize optimizing the __PARA__ pragma first, as it affect the performance the most.",
-        f"  (2) If you think all the parallel factors are already optimal, you consider pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
-        f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the c code under __TILE__.",
-        f"  (4) By default, setting __TILE__ to 1 is preferable.",
-        f"  (5) By default, setting __PIPE__ to off is preferable.",
-    ]
+	'general': [
+		f"Here is some knowledge about the HLS pragmas you are encountering:",
+		f"  (1) The pragmas only affect the next for loop after the pragma.",
+		f"  (2) The pragmas are __PARA__LX, __PIPE__LX, and __TILE__LX, where LX is the loop name and X is an integer.",
+	],
+	'best_design': [
+		f"Here is some information about the best design:",
+		f"A design is performance-wise better if it has a lower cycle count and resource utilization under 80%.",
+		f"When the cycle count is the same, you should choose the design with lower resource utilization.",
+		f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
+		f"When the performances are similar, you should choose the design with more room for improvement.",
+		f"Beyond all the metrics, you should avoid choosing the design that has not been exhaustively explored (i.e., has fewer remaining search spaces left).",
+		f"You are encouraged to choose one design that has results Compilation Timeout if there is any.",
+	],
+	'parallel': [
+		f"Here is some knowledge about the __PARA__LX pragma:",
+		f"  (1) The parallel pragma will parallelize the first for loop in the C code under __PARA__.",
+		f"  (2) Increasing the parallel factor will increase the resource utilization but improve the performance and decrease the number of cycles (which is one of your targets).",
+		f"  (3) Increasing the parallel factor roughly linearly increases the resource utilization within the loop it applies to, so you may scale the factor with respect to the ratio between current utilization and the 80% budget.",
+		f"  (4) Increasing the parallel factor will also increase the compilation time; you must decrease the parallel factor if you receive a compilation timeout.",
+		f"  (5) The compilation time is positively proportional to the parallel factor; you must choose the parallel factor such that the compilation time is under {COMPILE_TIMEOUT_MINUTES} minutes.",
+	],
+	'tile': [
+		f"Here is some knowledge about the __TILE__LX pragma:",
+		f"  (1) The tile pragma will tile the first for loop in the C code under __TILE__.",
+		f"  (2) Increasing the tile factor will reduce the memory transfer cycles because it will restrict the memory transfer.", 
+		f"  (3) When reducing the compilation time, you should consider setting the tile factor greater than 1.",
+	],
+	'pipeline': [
+		f"Here is some knowledge about the __PIPE__LX pragma:",
+		f"  (1) The pipeline pragma will affect MULTIPLE loops under __PIPE__.",
+		f"  (2) The flatten option will unroll all the for loops (which means putting __PARA__ equal to the loop bound in the for loop) under this pragma.",
+		f"  (3) Turning off the pipeline will not apply any pipelining, which is useful when you get a compilation timeout in the report.",
+		f"  (4) Choosing the empty string means coarse-grained pipelining, which increases (roughly doubles) the resource utilization of the for loop's module but potentially improves the performance (reducing cycle count).",
+	],
+	'arbitrator': [
+		f"Here is some information about the preference:",
+		f"  (1) You should prioritize optimizing the __PARA__ pragma first, as it affects the performance the most.",
+		f"  (2) If you think all the parallel factors are already optimal, you should consider the pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get a compilation timeout in the report.",
+		f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the C code under __TILE__.",
+		f"  (4) By default, setting __TILE__ to 1 is preferable.",
+		f"  (5) By default, setting __PIPE__ to off is preferable.",
+	]
 }
 
 # Constants:

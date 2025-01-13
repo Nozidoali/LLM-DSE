@@ -136,28 +136,28 @@ def retrieve_indices_from_response(response: str) -> List[int]:
 def compile_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list, best_design_info: dict) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
-        f"Here are the design space for the HLS pragmas:",
-        *[  f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {best_design_info[i]['remaining space']} out of {best_design_info[i]['remaining space']}."
-            for i, (_, design, hls_results, _) in enumerate(exploration_history) ], 
+        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
+        f"Here are the design spaces for the HLS pragmas:",
+        *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {best_design_info[i]['remaining space']} out of {best_design_info[i]['total space']}."
+          for i, (_, design, hls_results, _) in enumerate(exploration_history)],
         f"You are encouraged to choose the best designs that are not in the best design history.",
         *KNOWLEDGE_DATABASE['best_design'],
-        f"Note that in the exploration history, we have chosen the following indices as the best designs:\n" + "\n ".join([str(idx) for idx in best_design_history]), 
-        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
-        f"You must skip the reasoning and output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
+        f"Note that in the exploration history, we have chosen the following indices as the best designs:\n" + "\n ".join([str(idx) for idx in best_design_history]),
+        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.",
+        f"You must skip the reasoning and output a list of integer values separated by ',' and the values should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best designs among the following options.",
     ])
-    
+
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:
     return "\n".join([
         f"You must decide for each pragma below a list of warnings that you should consider when updating the pragma.",
-        f"For example, if you have the following warnings:",
+        f"For example, if you have the following warning:",
         f"WARNING: [CGPIP-208] Coarse-grained pipelining NOT applied on loop 'Lx' (top.c:YY)",
         f"It means that the coarse-grained pipelining is not applied on loop 'Lx' at line YY.",
         f"In this example, you should consider this warning when updating the pipeline pragma for loop 'Lx', i.e., __PIPE__Lx.",
         f"Based on the HLS compilation log, there are some warnings that you should assign to pragmas:",
         "\n".join([f"\t{i}. {warning}" for i, warning in enumerate(warnings)]),
-        f"The list of pragmas are:",
+        f"The list of pragmas is:",
         "\n".join([f"\t{i}. {pragma_name}" for i, pragma_name in enumerate(pragma_names)]),
         f"You must output a JSON string with the pragma name as the key and the list of original warnings as the value.",
         f"You don't need to include all the warnings, only the ones that are relevant to a pragma.",
@@ -168,39 +168,38 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
 def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str]) -> str:
     n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1) if pragma_type != "pipeline" else 1
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
+        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high-level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
         f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]} and values " + ", ".join([f"{k}" for k in exploration_history.keys()]) + ".",
         f"that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
         f"Note that when: {format_design(best_design)}",
-        (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""), 
-        f"If the warning suggests the pragma is not applied due to dependency or other reasons, you could decide to skip the pragma update by outputting empty string.",
-        f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}", 
+        (f"We received the warning:\n" + "\n".join(hls_warnings) if hls_warnings != [] else ""),
+        f"If the warning suggests the pragma is not applied due to dependency or other reasons, you could decide to skip the pragma update by outputting an empty string.",
+        f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
         "\n".join([f"and when {pragma_name} is {k}, the results are: {v}" for k, v in exploration_history.items()]),
-        f"To better decide the {pragma_type} factor, here are some knowledge about {pragma_type} pragmas:",
+        f"To better decide the {pragma_type} factor, here is some knowledge about {pragma_type} pragmas:",
         *KNOWLEDGE_DATABASE[pragma_type],
-        f"You must skip the reasoning and only output at most {n_optimizations} separate JSON strings  i.e., ```json{{\"{pragma_name}\": value}}```, which holds {n_optimizations} different values."
+        f"You must skip the reasoning and only output at most {n_optimizations} separate JSON strings, i.e., ```json{{\"{pragma_name}\": value}}```, which holds {n_optimizations} different values."
     ])
-    
+
 
 def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], list_of_warnings: List[str], pragma_updates: List[tuple], c_code: str) -> str:
     objective = "optimize clock cycles the most." if hls_results != {} else "reduce the resource utilization and the compilation time."
     n_designs: int = min(NUM_CHOSENS, len(pragma_updates))
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high level synthesis (HLS), your task is to choose {n_designs} single update from the following updates that {objective}",
+        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose {n_designs} single updates from the following updates that {objective}",
         "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),
         f"The CURRENT DESIGN is: {format_design(best_design)}",
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
-        f"The list of warnings are:\n" + "\n".join(list_of_warnings),
-        f"To better understand the problem, ", 
+        f"The list of warnings is:\n" + "\n".join(list_of_warnings),
+        f"To better understand the problem,",
         *KNOWLEDGE_DATABASE['general'],
         *KNOWLEDGE_DATABASE['parallel'],
         *KNOWLEDGE_DATABASE['pipeline'],
         *KNOWLEDGE_DATABASE['tile'],
-        f"To make better decision,", *KNOWLEDGE_DATABASE['arbitrator'],
-        f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(best_design.keys()) + "as a JSON string. i.e., can be represented as ```json{\"pragma1\": value1, \"pragma2\": value2, ...}```",
-        f"Note that in total you should only output {n_designs} separate JSON strings, which means {n_designs} designs. For each one of them, the new design should only has one pragma different from the original one (CURRENT DESIGN).",
+        f"To make a better decision,", *KNOWLEDGE_DATABASE['arbitrator'],
+        f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(best_design.keys()) + " as a JSON string, i.e., can be represented as ```json{\"pragma1\": value1, \"pragma2\": value2, ...}```",
+        f"Note that in total you should only output {n_designs} separate JSON strings, which means {n_designs} designs. For each one of them, the new design should only have one pragma different from the original one (CURRENT DESIGN).",
     ])
-    
 
 def parse_merlin_rpt(merlin_rpt: str) -> Dict[str, str]:
     try:
