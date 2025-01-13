@@ -146,7 +146,71 @@ def compile_best_design_prompt(c_code: str, exploration_history: list, best_desi
         f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.",
         f"You must skip the reasoning and output a list of integer values separated by ',' and the values should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best designs among the following options.",
     ])
-
+    
+def compile_parallel_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list) -> str:
+    n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
+    return "\n".join([
+        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
+        f"Here are the design space for the HLS pragmas:",
+        *[
+            f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}"
+            for i, (_, design, hls_results, _) in enumerate(exploration_history)
+        ],
+        f"A design is better if it has lower cycle count and resource utilization under 80%.",
+        f"When the cycle count is the same, you should choose the design with lower resource utilization.",
+        f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
+        f"When the performance are similar, you should choose the design with more room for improvement.",
+        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
+        f"Note that in the exploration history, we have chosen the following indices as the best designs: " + ", ".join([str(idx) for idx in best_design_history]), 
+        f"You are encouraged to choose the best designs that are not in the best design history.",
+        f"You never output the reasoning, only the indices of the best designs.",
+        f"You must output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
+    ])
+    
+def compile_pipeline_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list) -> str:
+    n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
+    return "\n".join([
+        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
+        f"Here are the design space for the HLS pragmas:",
+        *[
+            f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}"
+            for i, (_, design, hls_results, _) in enumerate(exploration_history)
+        ],
+        f"A design is better if it has the potential to apply more pipeline pragmas and achieve lower cycle.",
+        f"- Pipeline pragma will affect MULTIPLE loops under __PIPE__.",
+        f"- The flatten option will unroll all the for loops (which means putting __PARA__ equals to the loop bound in the for loop) under this pragma.",
+        f"The design you selected should have all resources (LUT, FF, BRAM, DSP, URAM) less than 0.8.",
+        f"It should contain at least one loop nest that is not already heavily parallelized.",
+        f"For the individual loop that could be flattened, it should have small or no unroll factor. For example, if you want to tune __PIPE__L1, then __PARA__L1 should be small.",
+        f"When the cycle count is the same, you should choose the design with lower resource utilization.",
+        f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
+        f"When the performance are similar, you should choose the design with more room for improvement.",
+        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
+        f"Note that in the exploration history, we have chosen the following indices as the best designs: " + ", ".join([str(idx) for idx in best_design_history]), 
+        f"You are encouraged to choose the best designs that are not in the best design history.",
+        f"You never output the reasoning, only the indices of the best designs.",
+        f"You must output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
+    ])
+    
+def compile_tile_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list) -> str:
+    n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
+    return "\n".join([
+        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
+        f"Here are the design space for the HLS pragmas:",
+        *[
+            f" {i}: {format_design(design)}. The results are: {format_results(hls_results)}"
+            for i, (_, design, hls_results, _) in enumerate(exploration_history)
+        ],
+        f"A design is better if it has the potential to apply more tile pragmas to resolve resource or timeout issues.",
+        f"When the cycle count is the same, you should choose the design with lower resource utilization.",
+        f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
+        f"When the performance are similar, you should choose the design with more room for improvement.",
+        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
+        f"Note that in the exploration history, we have chosen the following indices as the best designs: " + ", ".join([str(idx) for idx in best_design_history]), 
+        f"You are encouraged to choose the best designs that are not in the best design history.",
+        f"You never output the reasoning, only the indices of the best designs.",
+        f"You must output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
+    ])
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:
     return "\n".join([
