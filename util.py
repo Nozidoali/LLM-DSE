@@ -100,123 +100,51 @@ def get_openai_response(prompt, model=GPT_MODEL) -> str:
     open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response.choices[0].message.content)
     return(response.choices[0].message.content)
 
+def handle_response_exceptions(func):
+    def wrapper(response: str):
+        try:
+            return func(response)
+        except Exception:
+            print(f"WARNING: invalid response received {response}")
+            traceback.print_exc()
+            return None if func.__name__ == 'retrieve_index_from_response' else []
+    return wrapper
+
+@handle_response_exceptions
 def retrieve_code_from_response(response: str) -> str:
-    try:
-        return response.replace("```c++", "").replace("```", "").strip()
-    except Exception:
-        print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return ""
+    return response.replace("```c++", "").replace("```", "").strip()
 
+@handle_response_exceptions
 def retrieve_dict_from_response(response: str) -> dict:
-    try:
-        _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
-        design = json.loads("{"+re.findall(r'\{(.*?)\}', _response)[0]+"}")
-        return design
-    except Exception:
-        print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return {}
+    _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
+    design = json.loads("{"+re.findall(r'\{(.*?)\}', _response)[0]+"}")
+    return design
 
+@handle_response_exceptions
 def retrieve_list_from_response(response: str) -> List[dict]:
-    try:
-        return [json.loads(match) for match in re.findall(r'```json\s*(.*?)\s*```', response, re.DOTALL)]
-    except Exception:
-        print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return {}
+    return [json.loads(match) for match in re.findall(r'```json\s*(.*?)\s*```', response, re.DOTALL)]
 
+@handle_response_exceptions
 def retrieve_index_from_response(response: str) -> int:
-    try:
-        return int(response.strip())
-    except Exception:
-        print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return None
-    
+    return int(response.strip())
+
+@handle_response_exceptions
 def retrieve_indices_from_response(response: str) -> List[int]:
-    try:
-        return [int(x) for x in response.strip().split(",")]
-    except Exception:
-        print(f"WARNING: invalid response received {response}"); traceback.print_exc()
-        return None
-    
-KNOWLEDGE_DATABASE = {
-    'general': [
-        f"Here are some knowledge about the HLS pragmas you are encountering:",
-        f"  (1) The pragmas only affect the next for loop after the pragma.",
-        f"  (2) The pragmas are __PARA__LX, __PIPE__LX, and __TILE__LX, where LX is the loop name and X is an integer.",
-    ],
-    'parallel': [
-        f"Here are some knowledge about the __PARA__LX pragma:",
-        f"  (1) Parallel pragram will parallelize the first for loop in the c code under __PARA__.",
-        f"  (2) Increasing the parallel factor will increase the resource utilization but improve the performance and decease the number of cycles (which is one of your target).",
-        f"  (3) Increasing parallel factor roughly linearly increase the resource utilization within the loop it applies on, so you may scale the factor with respect to the ratio between current utilization with the 80% budget.",
-        f"  (4) Increasing the parallel factor will also increase the compilation time, you must decrease the parallel factor if you received the compilation timeout.", 
-        f"  (5) The compilation time is positively proportional to the parallel factor, you must choose the parallel factor such that the compilation time is under {COMPILE_TIMEOUT_MINUTES} minutes.",
-    ], 
-    'tile': [
-        f"Here are some knowledge about the __TILE__LX pragma:",
-        f"  (1) Tile pragma will tile the first for loop in the c code under __TILE__.",
-        f"  (2) Increasing the tile factor will reduce the memory transfer cycles because it will restrict the memory transfer.",
-    ],
-    'pipeline': [
-        f"Here are some knowledge about the __PIPE__LX pragma:",
-        f"  (1) Pipeline pragma will affect MULTIPLE loops under __PIPE__.",
-        f"  (2) The flatten option will unroll all the for loops (which means putting __PARA__ equals to the loop bound in the for loop) under this pragma.",
-        f"  (3) Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
-        f"  (4) Choosing the empty string means coarse-grained pipelining, which increase (roughly double) the resource utilization of the for loop's module but potentially improve the performance (reducing cycle count).",
-    ],
-    'arbitrator': [
-        f"Here are some information about the preference:",
-        f"  (1) You should prioritize optimizing the __PARA__ pragma first, as it affect the performance the most.",
-        f"  (2) If you think all the parallel factors are already optimal, you consider pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get compilation timeout in the report.",
-        f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the c code under __TILE__.",
-        f"  (4) By default, setting __TILE__ to 1 is preferable.",
-        f"  (5) By default, setting __PIPE__ to off is preferable.",
-    ]
-}
+    return [int(x) for x in response.strip().split(",")]
 
 
-def rewrite_c_code(c_code: str) -> str:
-    code_rewrite_prompt = "\n".join([
-        f"Given the following C code:\n ```c++ \n{c_code}\n```",
-        f"You must label each for loop with the corresponding pragma for high level synthesis (HLS).",
-        f"Note that", *KNOWLEDGE_DATABASE['general'],
-        """
-        For example, if you have a for loop like this:
-        ```c++
-        #pragma HLS __PARA__L0
-        for (int i = 0; i < N; i++) {
-            // loop body
-        }
-        ```
-        You should label it as follows:",
-        ```c++
-        #pragma HLS __PARA__L0
-        L0: for (int i = 0; i < N; i++) {
-            // loop body
-        }
-        ```
-        """,
-        f"You never modify the loop body and the functionality of the c code, only label the for loop with the pragma.",
-        f"You must output the C code in a code block. You never output reasoning.",
-    ])
-    return retrieve_code_from_response(get_openai_response(code_rewrite_prompt))
-
-
-def compile_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list, best_design_data: dict) -> str:
+def compile_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list, best_design_info: dict) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
         f"Here are the design space for the HLS pragmas:",
-        *[  f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {best_design_data[i]['remaining space']}."
-            for i, (_, design, hls_results, _) in enumerate(exploration_history) ],
-        f"A design is better if it has lower cycle count and resource utilization under 80%.",
-        f"When the cycle count is the same, you should choose the design with lower resource utilization.",
-        f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
-        f"When the performance are similar, you should choose the design with more room for improvement.",
-        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
-        f"Note that in the exploration history, we have chosen the following indices as the best designs:\n" + "\n ".join([str(idx) for idx in best_design_history]), 
+        *[  f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {best_design_info[i]['remaining space']} out of {best_design_info[i]['remaining space']}."
+            for i, (_, design, hls_results, _) in enumerate(exploration_history) ], 
         f"You are encouraged to choose the best designs that are not in the best design history.",
-        f"You never output the reasoning, only the indices of the best designs.",
-        f"You must output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
+        *KNOWLEDGE_DATABASE['best_design'],
+        f"Note that in the exploration history, we have chosen the following indices as the best designs:\n" + "\n ".join([str(idx) for idx in best_design_history]), 
+        f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.", 
+        f"You must skip the reasoning and output a list of integer values separated by ',' and the value should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best design among the following options.",
     ])
     
 
