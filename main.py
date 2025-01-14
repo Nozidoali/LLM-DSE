@@ -1,4 +1,4 @@
-import json
+import json, time
 from config import *
 from util import *
 from explorer import *
@@ -8,6 +8,10 @@ def llm_dse(c_code, config_file):
     curr_design_list = [get_default_design(config_file)]
     explorer = Explorer(c_code, curr_design_list[0].keys())
     i_steps = 0
+    tic = time.time()
+    with open(TIME_LOGFILE, 'w') as f:
+        f.close()
+    _iter = 0
     while i_steps < MAX_ITER:
         print("-"*80 + f"\nStarting iteration {i_steps}")
         compile_args = [(WORK_DIR, explorer.c_code, design, i_steps + i) for i, design in enumerate(curr_design_list)]
@@ -17,6 +21,11 @@ def llm_dse(c_code, config_file):
             explorer.record_history(i_steps + i, design, *merlin_res)
         i_steps += len(curr_design_list)
         if i_steps >= MAX_ITER - 1: break
+        toc = time.time() - tic
+        _iter += 1
+        with open(TIME_LOGFILE, 'a') as f:
+            f.write(f'Iteration {_iter}, Total runtime: {toc}')
+            f.close()
         curr_design_list = explorer.explore()
 
 if __name__ == "__main__":

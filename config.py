@@ -24,6 +24,7 @@ DEBUG: bool = False
 BENCHMARK: str = args.benchmark
 WORK_DIR: str = os.getenv("WORK_DIR") + f"/work_{BENCHMARK}_{DATE_STR}"
 OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
+TIME_LOGFILE = f"{WORK_DIR}/time.log"
 C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
 CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
 PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
