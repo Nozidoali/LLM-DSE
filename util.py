@@ -116,8 +116,7 @@ def retrieve_code_from_response(response: str) -> str:
 
 @handle_response_exceptions
 def retrieve_dict_from_response(response: str) -> dict:
-    _response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
-    design = json.loads("{"+re.findall(r'\{(.*?)\}', _response)[0]+"}")
+    design = json.loads(re.findall(r'```json\s*(.*?)\s*```', response, re.DOTALL)[0])
     return design
 
 @handle_response_exceptions
