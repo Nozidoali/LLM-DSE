@@ -1,5 +1,5 @@
 #!/bin/bash
-folder_path=./data/lad25
+folder_path=./data/pack2
 result_path=./results0112
 
 # mode="run"
