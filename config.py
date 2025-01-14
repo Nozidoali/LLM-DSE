@@ -105,7 +105,6 @@ KNOWLEDGE_DATABASE = {
 		f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the C code under __TILE__.",
 		f"  (4) By default, setting __TILE__ to 1 is preferable.",
 		f"  (5) By default, setting __PIPE__ to off is preferable.",
-		# f"  (6) While following all previous rules, always prioritize __PIPE__L3 before __PIPE__L0, __PIPE__L4 before __PIPE__L1, __PIPE__L5 before __PIPE__L2.",
 	]
 }
 
