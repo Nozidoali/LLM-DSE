@@ -71,12 +71,11 @@ KNOWLEDGE_DATABASE = {
 	],
 	'best_design': [
 		f"Here is some information about the best design:",
-		f"A design is performance-wise better if it has a lower cycle count and resource utilization under 80%.",
-		f"When the cycle count is the same, you should choose the design with lower resource utilization.",
-		f"Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
-		f"When the performances are similar, you should choose the design with more room for improvement.",
-		f"Beyond all the metrics, you should avoid choosing the design that has been exhaustively explored (i.e., has fewer remaining search spaces left).",
-		# f"You are encouraged to choose one design that has results Compilation Timeout if there is any.",
+		f"	(1) A design is performance-wise better if it has a lower cycle count and resource utilization under 80%.",
+		f"	(2) When the cycle count is the same, you should choose the design with lower resource utilization.",
+		f"	(3) Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
+		f"	(4) When the performances are similar, you should choose the design with more room for improvement.",
+		f"	(5) Beyond all the metrics, you should avoid choosing the design that has been exhaustively explored (i.e., has fewer remaining search spaces left).",
 	],
 	'parallel': [
 		f"Here is some knowledge about the __PARA__LX pragma:",

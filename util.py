@@ -165,8 +165,8 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
 def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str]) -> str:
     n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1) if pragma_type != "pipeline" else 1
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high-level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
-        f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]} and values " + ", ".join([f"{k}" for k in exploration_history.keys()]) + ".",
+        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
+        f"You must choose {n_optimizations} values among {all_options} other than {best_design[pragma_name]}" + (" and values " + ", ".join([f"{k}" for k in exploration_history.keys()]) if len(exploration_history) > 0 else "") + ".",
         f"that can optimize the performance the most (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes.",
         f"Note that when: {format_design(best_design)}",
         ((f"We received the warning:\n" + "\n".join(hls_warnings)) if hls_warnings != [] else ""),

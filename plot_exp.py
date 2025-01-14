@@ -1,6 +1,6 @@
 import os
 
-RESULT_DIR = "./results0110"
+RESULT_DIR = "./results0112"
 MODE = "BEST_PERF"
 # MODE = "AGG_DATA"
 # MODE = "PLOT_DSE"

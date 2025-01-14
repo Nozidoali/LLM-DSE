@@ -9,7 +9,7 @@ result_folders = [
     'results0108',
     'results0109',
     'results0110',
-    '0110gemver'
+    'results0112',
 ]
 database_folder = './data/compilation_results'
 
