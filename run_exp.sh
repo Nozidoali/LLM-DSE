@@ -2,8 +2,8 @@
 folder_path=./data/pack2
 result_path=./results0112
 
-# mode="run"
-mode="harvest"
+mode="run"
+# mode="harvest"
 
 work_dir=/scratch/hanyu
 date_str=20250112_234942 # for harvest
@@ -21,6 +21,7 @@ while IFS= read -r c_file; do
             echo "work_${base_name}_${date_str} exists in ${work_dir}"
             cp ${work_dir}/work_${base_name}_${date_str}/results.csv ./${result_path}/${base_name}.csv
             cp ${work_dir}/work_${base_name}_${date_str}/openai.log ./${result_path}/${base_name}.txt
+            cp ${work_dir}/work_${base_name}_${date_str}/time.log ./${result_path}/${base_name}.log
         else
             echo "work_${base_name}_${date_str} does not exist in ${work_dir}"
         fi

@@ -39,9 +39,10 @@ if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 
 # DSE
+NUM_BEST_DESIGN_CANIDATES = 10
 MAX_ITER = 500
 NUM_BEST_DESIGNS = 2
-NUM_OPTIMIZATIONS = 3
+NUM_OPTIMIZATIONS = 2
 NUM_CHOSENS = 8
 MAX_WORKERS = NUM_CHOSENS * NUM_BEST_DESIGNS
 
@@ -99,7 +100,7 @@ KNOWLEDGE_DATABASE = {
 		f"  (4) Choosing the empty string means coarse-grained pipelining, which increases (roughly doubles) the resource utilization of the for loop's module but potentially improves the performance (reducing cycle count).",
 	],
 	'arbitrator': [
-		f"Here is some information about the preference:",
+		f"To make a better decision, here is some information about the preference:",
 		f"  (1) You should prioritize optimizing the __PARA__ pragma first, as it affects the performance the most.",
 		f"  (2) If you think all the parallel factors are already optimal, you should consider the pipeline as the secondary choice. When doing so, you must remember that the pipeline pragma will affect MULTIPLE loops. The flatten option will unroll all the for loops under this pragma. Turning off the pipeline will not apply any pipelining, which is useful when you get a compilation timeout in the report.",
 		f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the C code under __TILE__.",

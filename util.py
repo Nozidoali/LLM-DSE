@@ -13,15 +13,32 @@ import signal
 import time
 from datetime import timedelta
 
+
+def extract_parathesis(s):
+    return int(re.search(r'\((.*?)\)', s).group(1).replace("~", "").replace("%", ""))/100 if isinstance(s, str) and "(" in s else float("inf")
+
+def exclude_parathesis(s):
+    return int(s.split("(")[0].strip()) if isinstance(s, str) and "(" in s else float("inf")
+
 def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
     return {p: config_dict[p]["default"] for p in config_dict}
 
-def format_design(design: dict) -> str:
-    return ", ".join([f"{k} = {v}" for k, v in design.items()])
+def is_timeout(results: dict) -> bool:
+    return results == {} or "cycles" not in results or results["cycles"] == ""
+
+def is_valid(results: dict) -> bool:
+    return max([extract_parathesis(results[m]) for m in ['lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']]) <= 0.8
+
+def sort_history(history: list) -> list:
+    return sorted(history, key=lambda x: x[2]["cycles"] if not is_timeout(x[2]) and is_valid(x[2]) else float("inf"))
+
+
+def format_design(design: dict, exclude: list = None) -> str:
+    return ", ".join([f"{k} = {v}" for k, v in design.items() if not exclude or k not in exclude])
 
 def format_results(results: dict) -> str:
-    if results == {} or "cycles" not in results or results["cycles"] == "": return "Compilation Timeout."
+    if is_timeout(results): return "Compilation Timeout."
     return ", ".join([f"{k} = {v}" for k, v in results.items()])
 
 def designs_are_adjacent(design1: dict, design2: dict) -> bool:
@@ -132,18 +149,16 @@ def retrieve_indices_from_response(response: str) -> List[int]:
     return [int(x) for x in response.strip().split(",")]
 
 
-def compile_best_design_prompt(c_code: str, exploration_history: list, best_design_history: list, best_design_info: dict) -> str:
-    n_best_designs: int = min(NUM_BEST_DESIGNS, len(exploration_history))
+def compile_best_design_prompt(c_code: str, candidates: list) -> str:
+    n_best_designs: int = min(NUM_BEST_DESIGNS, len(candidates))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
         f"Here are the design spaces for the HLS pragmas:",
-        *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {best_design_info[i]['remaining space']} out of {best_design_info[i]['total space']}."
-          for i, (_, design, hls_results, _) in enumerate(exploration_history)],
-        f"You are encouraged to choose the best designs that are not in the best design history.",
+        *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {info['remaining space']} out of {info['total space']}."
+          for i, (_, design, hls_results, _, info) in enumerate(candidates)],
         *KNOWLEDGE_DATABASE['best_design'],
-        f"Note that in the exploration history, we have chosen the following indices as the best designs:\n" + "\n ".join([str(idx) for idx in best_design_history]),
         f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.",
-        f"You must skip the reasoning and output a list of integer values separated by ',' and the values should be in the range of {range(len(exploration_history))} representing the top {n_best_designs} best designs among the following options.",
+        f"You must skip the reasoning and output a list of integer values separated by ',' and the values should be in the range of {range(len(candidates))} representing the top {n_best_designs} best designs among the following options.",
     ])
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:
@@ -179,22 +194,19 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
     ])
 
 
-def compile_arbitrator_prompt(best_design: dict, hls_results: Dict[str, str], list_of_warnings: List[str], pragma_updates: List[tuple], c_code: str) -> str:
-    objective = "optimize clock cycles the most." if hls_results != {} else "reduce the resource utilization and the compilation time."
+def compile_arbitrator_prompt(c_code: str, pragma_updates: List[tuple], pragma_names: List[str]) -> str:
     n_designs: int = min(NUM_CHOSENS, len(pragma_updates))
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose {n_designs} single updates from the following updates that {objective}",
-        "\n".join([f"({i}): change {k} from {best_design[k]} to {v}" for i, (k, v) in enumerate(pragma_updates)]),
-        f"The CURRENT DESIGN is: {format_design(best_design)}",
-        f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
-        f"The list of warnings is:\n" + "\n".join(list_of_warnings),
+        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose {n_designs} single updates from the following updates that optimize clock cycles the most.",
+        "\n".join([f"({i}): change {k} from {d[k]} to {v} while {format_design(d, exclude=[k])}" 
+            for i, (d, k, v) in enumerate(pragma_updates)]),
         f"To better understand the problem,",
         *KNOWLEDGE_DATABASE['general'],
         *KNOWLEDGE_DATABASE['parallel'],
         *KNOWLEDGE_DATABASE['pipeline'],
         *KNOWLEDGE_DATABASE['tile'],
-        f"To make a better decision,", *KNOWLEDGE_DATABASE['arbitrator'],
-        f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(best_design.keys()) + " as a JSON string, i.e., can be represented as ```json{\"pragma1\": value1, \"pragma2\": value2, ...}```",
+        *KNOWLEDGE_DATABASE['arbitrator'],
+        f"Make the update to the current design and you must output the new design with the following pragma's values: " + ",".join(pragma_names) + " as a JSON string, i.e., can be represented as ```json{\"<pragma1>\": value1, \"<pragma2>\": value2, ...}```",
         f"Note that in total you should only output {n_designs} separate JSON strings, which means {n_designs} designs. For each one of them, the new design should only have one pragma different from the original one (CURRENT DESIGN).",
     ])
 
@@ -223,3 +235,5 @@ def compile_design_space(config_file: str) -> dict:
     config_dict = json.load(open(config_file, "r"))["design-space.definition"]
     return {p: _parse_options(p, config_dict[p]['options']) for p in config_dict}
 
+def get_pragma_type(pragma_name: str) -> str:
+    return "parallel" if "PARA" in pragma_name else "tile" if "TILE" in pragma_name else "pipeline"
