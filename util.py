@@ -30,9 +30,12 @@ def is_timeout(results: dict) -> bool:
 def is_valid(results: dict) -> bool:
     return max([extract_parathesis(results[m]) for m in ['lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']]) <= 0.8
 
-def sort_history(history: list) -> list:
-    return sorted(history, key=lambda x: x[2]["cycles"] if not is_timeout(x[2]) and is_valid(x[2]) else float("inf"))
+def get_perf(results: dict) -> float:
+    if is_timeout(results) or not is_valid(results): return float("inf")
+    return exclude_parathesis(results["cycles"])
 
+def sort_history(history: list) -> list:
+    return sorted(history, key=get_perf)
 
 def format_design(design: dict, exclude: list = None) -> str:
     return ", ".join([f"{k} = {v}" for k, v in design.items() if not exclude or k not in exclude])
