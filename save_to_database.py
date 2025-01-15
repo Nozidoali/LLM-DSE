@@ -3,13 +3,14 @@ import pandas as pd
 import re
 
 result_folders = [
-    'results0102',
-    'results0103',
-    'results0104',
-    'results0108',
-    'results0109',
-    'results0110',
-    'results0112',
+    # 'results0102',
+    # 'results0103',
+    # 'results0104',
+    # 'results0108',
+    # 'results0109',
+    # 'results0110',
+    # 'results0112',
+    'results0114',
 ]
 database_folder = './data/compilation_results'
 
