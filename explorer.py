@@ -63,6 +63,8 @@ class Explorer():
         for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
             print(f"Reflections for {pragma_name}:\n\t" + "\n\t".join(reflections))
             self.optimizer_reflections[pragma_name].extend(reflections)
+            if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
+                self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
         
     def explore(self):
         pragma_updates = []

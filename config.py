@@ -40,6 +40,7 @@ GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 
 SELF_REFLECTION_WORD_LIMIT = 30
 SELF_REFLECTION_LIMIT = 1
+SELF_REFLECTION_LENGTH = 10
 
 # DSE
 NUM_BEST_DESIGN_CANIDATES = 10
@@ -112,7 +113,7 @@ KNOWLEDGE_DATABASE = {
 	],
 	'reflection': [
 		f"The reflection you generated should be general enough to help optimizing the pragmas' value in the next design iteration.", 
-		f"Meaning that, we should avoid include specific values in the reflection to avoid overfitting.",
+		f"Meaning that, you should avoid include specific values in the reflection to avoid overfitting.",
 		f"Some examples of reflection questions are:",
 		f"  (1) What was the change in the design and how did that affect the performance, resource utilization and compilation time?", 
 		f"  (2) What was the difference in the two sets of warnings? Did the change in pragma value affect the warnings?",
