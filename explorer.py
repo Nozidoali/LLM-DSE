@@ -8,18 +8,20 @@ class Explorer():
         self.ds_config = compile_design_space(CONFIG_FILE)
         self.exploration_history, self.datas = [], []
         self.pragma_names: List[str] = list(pragma_names)[:]
+        self.optimizer_reflections: Dict[str, List[str]] = {p: [] for p in pragma_names}
         
-    def record_history(self, i_step: int, prev_design: dict, design: dict, hls_results: Dict[str, str], hls_warnings: List[str]):
-        pragma_warnings = {}
-        if hls_warnings:
-            warning_analysis_prompt = compile_warning_analysis_prompt(hls_warnings, self.pragma_names)
-            pragma_warnings = retrieve_dict_from_response(get_openai_response(warning_analysis_prompt))
+    def record_history(self, i_step: int, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]]):
         self.exploration_history.append([i_step, design, hls_results, pragma_warnings])
         self.datas.append({**hls_results, **design, "step": i_step})
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)        
     
     def load_history(self, design: dict, pragma_name: str) -> Dict[str, str]:
         return {x[1][pragma_name]: format_results(x[2]) for x in self.exploration_history if designs_are_adjacent(x[1], design) and x[1][pragma_name] != design[pragma_name]}
+    
+    def load_results(self, design: dict) -> Dict[str, str]:
+        for x in self.exploration_history:
+            if designs_are_equal(x[1], design): return x[2], x[3]
+        return None, None
     
     def get_info(self, design: dict) -> int:
         num_total, num_explored = lambda x: len(self.ds_config[x]), lambda x: len(self.load_history(design, x))
@@ -52,6 +54,16 @@ class Explorer():
         response = get_openai_response(prompt)
         return list(map(lambda x: candidates[x][0], retrieve_indices_from_response(response)))
     
+    def self_reflection(self, prev_design: dict, curr_design: dict, 
+            prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]],
+            curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]]):
+        if not prev_hls_results or not curr_hls_results: return
+        reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
+            prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
+        for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
+            print(f"Reflections for {pragma_name}:\n\t" + "\n\t".join(reflections))
+            self.optimizer_reflections[pragma_name].extend(reflections)
+        
     def explore(self):
         pragma_updates = []
         for pragma_name in self.pragma_names:
@@ -60,7 +72,7 @@ class Explorer():
                 _, best_design, hls_results, pragma_warnings = self.exploration_history[best_design_index]
                 list_of_warnings = pragma_warnings.get(pragma_name, [])
                 exploration_history = self.load_history(best_design, pragma_name)
-                update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, self.ds_config[pragma_name], pragma_type, list_of_warnings, exploration_history)
+                update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, self.ds_config[pragma_name], pragma_type, list_of_warnings, exploration_history, self.optimizer_reflections[pragma_name])
                 pragma_updates.extend((best_design, pragma_name, update.get(pragma_name)) for update in retrieve_list_from_response(get_openai_response(update_prompt)))
         prompt = compile_arbitrator_prompt(self.c_code, pragma_updates, self.pragma_names)
         return [(best_design, {**best_design, **chosen_update}) for chosen_update in retrieve_list_from_response(get_openai_response(prompt))]

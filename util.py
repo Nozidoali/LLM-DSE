@@ -47,6 +47,9 @@ def format_results(results: dict) -> str:
 def designs_are_adjacent(design1: dict, design2: dict) -> bool:
     return sum([design1[k] != design2[k] for k in design1.keys()]) == 1
 
+def designs_are_equal(design1: dict, design2: dict) -> bool:
+    return all([design1[k] == design2[k] for k in design1.keys()])
+
 def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
     results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
     selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
@@ -155,13 +158,32 @@ def retrieve_indices_from_response(response: str) -> List[int]:
 def compile_best_design_prompt(c_code: str, candidates: list) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(candidates))
     return "\n".join([
-        f"For the given C code\n ```c++ \n{c_code}\n``` with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
+        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
         f"Here are the design spaces for the HLS pragmas:",
         *[f" {i}: {format_design(design)}. The results are: {format_results(hls_results)} and the remaining search space is {info['remaining space']} out of {info['total space']}."
           for i, (_, design, hls_results, _, info) in enumerate(candidates)],
         *KNOWLEDGE_DATABASE['best_design'],
         f"This is because we are doing a design space exploration, and we want to find the design that can be further optimized.",
         f"You must skip the reasoning and output a list of integer values separated by ',' and the values should be in the range of {range(len(candidates))} representing the top {n_best_designs} best designs among the following options.",
+    ])
+    
+def compile_reflection_prompt(c_code: str, prev_design: dict, curr_design: dict, prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]], curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]], pragma_names: List[str]) -> str:
+    return "\n".join([
+        f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to reflect on the previous design and the current design.", 
+        f"Here is the previous design: {format_design(prev_design)}",
+        f"Here is the current design: {format_design(curr_design)}",
+        f"The kernel's results of the previous design are: {format_results(prev_hls_results)}",
+        f"The warnings received are: {prev_pragma_warnings}", 
+        f"The kernel's results of the current design are: {format_results(curr_hls_results)}",
+        f"The warnings received are: {curr_pragma_warnings}",
+        f"Your task is to output a JSON string with the pragma name as the key and the list of reflections as the value.", 
+        *KNOWLEDGE_DATABASE['reflection'], 
+        f"The list of pragmas is:",
+        "\n".join([f"\t{i}. {pragma_name}" for i, pragma_name in enumerate(pragma_names)]),
+        f"You must output a JSON string with the pragma name as the key and the list of reflection strings.",
+        f"You don't need to cover all the pragmas, only the ones that has useful reflections.", 
+        f"You could generate at most {SELF_REFLECTION_LIMIT} reflections for each pragma, and each reflection should be a sentence with at most {SELF_REFLECTION_WORD_LIMIT} words.",
+        f"Never output the reasoning and you must make sure the JSON string is valid.",
     ])
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:
@@ -180,7 +202,7 @@ def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]
         f"Never output the reasoning and you must make sure the JSON string is valid.",
     ])
 
-def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str]) -> str:
+def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str], pragma_name: str, c_code: str, all_options: List[str], pragma_type: str, hls_warnings: List[str], exploration_history: Dict[str, str], self_reflection: List[str] = []) -> str:
     n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1) if pragma_type != "pipeline" else 1
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
@@ -192,7 +214,8 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
         f"The kernel's results after HLS synthesis are:\n {format_results(hls_results)}",
         "\n".join([f"and when {pragma_name} is {k}, the results are: {v}" for k, v in exploration_history.items()]),
         f"To better decide the {pragma_type} factor, here is some knowledge about {pragma_type} pragmas:",
-        *KNOWLEDGE_DATABASE[pragma_type],
+        *KNOWLEDGE_DATABASE[pragma_type], 
+        (f"Based on the previous experience, you could consider the following reflections:\n" + "\n".join(self_reflection) if self_reflection != [] else ""),
         f"You must skip the reasoning and only output at most {n_optimizations} separate JSON strings, i.e., ```json{{\"{pragma_name}\": value}}```, which holds {n_optimizations} different values."
     ])
 

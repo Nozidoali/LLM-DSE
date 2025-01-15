@@ -38,6 +38,9 @@ if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
 GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 
+SELF_REFLECTION_WORD_LIMIT = 30
+SELF_REFLECTION_LIMIT = 1
+
 # DSE
 NUM_BEST_DESIGN_CANIDATES = 10
 MAX_ITER = 500
@@ -106,7 +109,16 @@ KNOWLEDGE_DATABASE = {
 		f"  (3) If you think all the parallel factors are already optimal, and the pipeline pragma is already optimal, you can consider the tile pragma. The tile pragma will tile the first for loop in the C code under __TILE__.",
 		f"  (4) By default, setting __TILE__ to 1 is preferable.",
 		f"  (5) By default, setting __PIPE__ to off is preferable.",
-	]
+	],
+	'reflection': [
+		f"The reflection you generated should be general enough to help optimizing the pragmas' value in the next design iteration.", 
+		f"Meaning that, we should avoid include specific values in the reflection to avoid overfitting.",
+		f"Some examples of reflection questions are:",
+		f"  (1) What was the change in the design and how did that affect the performance, resource utilization and compilation time?", 
+		f"  (2) What was the difference in the two sets of warnings? Did the change in pragma value affect the warnings?",
+		f"  (3) What was the major differences in the two resutls? How did the change in pragma value affect the results?", 
+		f"  (4) How would you explain the change in the performance, resource utilization and compilation time given the code structure?",
+	],
 }
 
 # Constants:
