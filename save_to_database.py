@@ -10,7 +10,9 @@ result_folders = [
     # 'results0109',
     # 'results0110',
     # 'results0112',
-    'results0114',
+    # 'results0114',
+    'results0116_1',
+    'results0116_2',
 ]
 database_folder = './data/compilation_results'
 

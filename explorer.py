@@ -37,16 +37,16 @@ class Explorer():
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
             candidates.append(history[0] + [self.get_info(best_design)])
-            for step, design, hls_results, pragma_warnings in self.exploration_history:
+            for step, design, hls_results, pragma_warnings in history[1:]:
                 if is_timeout(hls_results): continue
                 if not is_valid(hls_results): continue
-                if designs_are_adjacent(design, best_design): continue
+                # if designs_are_adjacent(design, best_design): continue
                 candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
-            for step, design, hls_results, pragma_warnings in self.exploration_history:
-                if not is_timeout(hls_results): continue
-                candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
+            for step, design, hls_results, pragma_warnings in history:
+                if is_timeout(hls_results) or not is_valid(hls_results):
+                    candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
             
         if len(candidates) < NUM_BEST_DESIGNS: return list(map(lambda x: x[0], candidates))
@@ -62,10 +62,11 @@ class Explorer():
             prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
         for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
             print(f"Reflections for {pragma_name}:\n\t" + "\n\t".join(reflections))
-            self.optimizer_reflections[pragma_name].extend(reflections)
-            if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
-                self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
-        
+            if pragma_name in self.optimizer_reflections:
+                self.optimizer_reflections[pragma_name].extend(reflections)
+                if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
+                    self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
+
     def explore(self):
         pragma_updates = []
         for pragma_name in self.pragma_names:

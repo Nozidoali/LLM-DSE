@@ -35,7 +35,7 @@ def get_perf(results: dict) -> float:
     return exclude_parathesis(results["cycles"])
 
 def sort_history(history: list) -> list:
-    return sorted(history, key=get_perf)
+    return sorted(history, key=lambda x: get_perf(x[2]))
 
 def format_design(design: dict, exclude: list = None) -> str:
     return ", ".join([f"{k} = {v}" for k, v in design.items() if not exclude or k not in exclude])
@@ -178,10 +178,11 @@ def compile_reflection_prompt(c_code: str, prev_design: dict, curr_design: dict,
         f"The warnings received are: {curr_pragma_warnings}",
         f"Your task is to output a JSON string with the pragma name as the key and the list of reflections as the value.", 
         *KNOWLEDGE_DATABASE['reflection'], 
-        f"The list of pragmas is:",
+        f"Note that your objective is to optimize the performance (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes."
+        f"The list of pragma names is:",
         "\n".join([f"\t{i}. {pragma_name}" for i, pragma_name in enumerate(pragma_names)]),
         f"You must output a JSON string with the pragma name as the key and the list of reflection strings.",
-        f"You don't need to cover all the pragmas, only the ones that has useful reflections.", 
+        f"You don't need to cover all the pragmas, only the ones that has REALLY constructive suggestion.", 
         f"You could generate at most {SELF_REFLECTION_LIMIT} reflections for each pragma, and each reflection should be a sentence with at most {SELF_REFLECTION_WORD_LIMIT} words.",
         f"Never output the reasoning and you must make sure the JSON string is valid.",
     ])
