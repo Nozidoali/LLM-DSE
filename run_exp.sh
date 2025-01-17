@@ -1,12 +1,12 @@
 #!/bin/bash
 folder_path=./data/pack2
-result_path=./results0116_2
+result_path=./results0117
 
 # mode="run"
 mode="harvest"
 
 work_dir=/scratch/hanyu
-date_str=20250114_223344 # for harvest
+date_str=20250116_152048 # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)

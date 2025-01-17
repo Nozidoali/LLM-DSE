@@ -20,7 +20,6 @@ args = parser.parse_args()
 # Control factors
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEVICE = os.getenv("DEVICE")
-DEBUG: bool = False
 BENCHMARK: str = args.benchmark
 WORK_DIR: str = os.getenv("WORK_DIR") + f"/work_{BENCHMARK}_{DATE_STR}"
 OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
@@ -33,6 +32,15 @@ COMPILE_TIMEOUT_MINUTES: int = 60
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
 ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip some useful warnings
 DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
+
+# Debug mode
+DEBUG: bool = False
+DEBUG_OPENAI: bool = False # If we use human response to debug
+AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
+AUTO_OPTIMIZER: bool = True # Automatically optimize the design
+AUTO_REFLECTION: bool = True # Automatically generate reflection
+AUTO_ARBITRATOR: bool = True # Automatically choose the best pragma
+AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
@@ -55,6 +63,7 @@ def print_config():
 	print(f"OPENAI_LOGFILE: {OPENAI_LOGFILE}")
 	print(f"DEVICE: {DEVICE}")
 	print(f"DEBUG: {DEBUG}")
+	print(f"DEBUG_OPENAI: {DEBUG_OPENAI}")
 	print(f"BENCHMARK: {BENCHMARK}")
 	print(f"WORK_DIR: {WORK_DIR}")
 	print(f"C_CODE_FILE: {C_CODE_FILE}")
@@ -80,7 +89,7 @@ KNOWLEDGE_DATABASE = {
 		f"	(2) When the cycle count is the same, you should choose the design with lower resource utilization.",
 		f"	(3) Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
 		f"	(4) When the performances are similar, you should choose the design with more room for improvement.",
-		f"	(5) Beyond all the metrics, you should avoid choosing the design that has been exhaustively explored (i.e., has fewer remaining search spaces left).",
+		f"	(5) Besides all the metrics above, you should priority the design that has more remaining search spaces left).",
 	],
 	'parallel': [
 		f"Here is some knowledge about the __PARA__LX pragma:",
@@ -120,7 +129,23 @@ KNOWLEDGE_DATABASE = {
 		f"  (3) What was the major differences in the two resutls? How did the change in pragma value affect the results?", 
 		f"  (4) How would you explain the change in the performance, resource utilization and compilation time given the code structure?",
 	],
+	"warning_analysis": [
+        f"For example, if you have the following warning:",
+        f"WARNING: [CGPIP-208] Coarse-grained pipelining NOT applied on loop 'Lx' (top.c:YY)",
+        f"It means that the coarse-grained pipelining is not applied on loop 'Lx' at line YY.",
+        f"In this example, you should consider this warning when updating the pipeline pragma for loop 'Lx', i.e., __PIPE__Lx.",
+ 	],
+	"objective": [
+        f"The objective is to optimize the performance (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes."
+	],
 }
+
+def REGULATE_OUTPUT(output_type: str, *args):
+	if output_type == "index list":
+		n_total, n_output = args
+		return f"You must skip the reasoning and output a list of integer values separated by ',' and the values should range from 0 to {n_total} representing the top {n_output} choices among the given options."
+	else:
+		raise NotImplementedError(f"Output type {output_type} is not implemented.")
 
 # Constants:
 KERNEL_NAME: str = "top"
