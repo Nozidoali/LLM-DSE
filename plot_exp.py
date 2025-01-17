@@ -1,6 +1,6 @@
 import os
 
-RESULT_DIR = "./results0117"
+RESULT_DIR = "./results0117_2"
 MODE = "BEST_PERF"
 # MODE = "AGG_DATA"
 # MODE = "PLOT_DSE"
@@ -8,7 +8,7 @@ MODE = "BEST_PERF"
 BASELINE_METHOD = "AutoDSE"
 
 # find all the files in the RESULT_DIR
-BENCHMARK_SUITES = [os.path.basename(f).split('.')[0] for f in os.listdir(RESULT_DIR) if f.endswith(".txt")]
+BENCHMARK_SUITES = [os.path.basename(f).split('.')[0] for f in os.listdir(RESULT_DIR) if f.endswith(".csv")]
 
 HARP_BASELINE = {
     "bradybench_0": 39347,

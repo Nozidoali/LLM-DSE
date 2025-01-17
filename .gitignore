@@ -13,3 +13,4 @@ __pycache__/
 *.pdf
 
 !data/compilation_results/*.csv
+baseline

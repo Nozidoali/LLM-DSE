@@ -33,7 +33,7 @@ class Explorer():
     def analyze_warnings(self, warnings: List[str]) -> Dict[str, List[str]]:
         pragma_warnings = {}
         if AUTO_WARNING_ANALYSIS:
-            pragma_warnings = {pragma_name: [_w for _w in warnings if get_loop_name(pragma_name) in _w] for pragma_name in self.pragma_names}
+            return {pragma_name: [_w for _w in warnings if get_loop_name(pragma_name) in _w] for pragma_name in self.pragma_names}
         if warnings:
             try:
                 warning_analysis_prompt = compile_warning_analysis_prompt(warnings, self.pragma_names)
