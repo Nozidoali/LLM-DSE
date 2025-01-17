@@ -1,9 +1,9 @@
 #!/bin/bash
-folder_path=./data/pack2
+folder_path=./data/lad25
 result_path=./results0117
 
-# mode="run"
-mode="harvest"
+mode="run"
+# mode="harvest"
 
 work_dir=/scratch/hanyu
 date_str=20250116_152048 # for harvest

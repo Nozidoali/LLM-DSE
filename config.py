@@ -34,8 +34,8 @@ ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip 
 DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
 
 # Debug mode
-DEBUG: bool = False
-DEBUG_OPENAI: bool = False # If we use human response to debug
+DEBUG_MERLIN: bool = False # DONT CHANGE THIS UNLESS YOU ARE DEBUGGING MERLIN
+DEBUG_OPENAI: bool = True # If we use human response to debug
 AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
 AUTO_OPTIMIZER: bool = True # Automatically optimize the design
 AUTO_REFLECTION: bool = True # Automatically generate reflection
@@ -54,7 +54,7 @@ SELF_REFLECTION_LENGTH = 10
 NUM_BEST_DESIGN_CANIDATES = 10
 MAX_ITER = 500
 NUM_BEST_DESIGNS = 2
-NUM_OPTIMIZATIONS = 2
+NUM_OPTIMIZATIONS = 3
 NUM_CHOSENS = 8
 MAX_WORKERS = NUM_CHOSENS * NUM_BEST_DESIGNS
 
@@ -62,8 +62,6 @@ def print_config():
 	print(f"-"*80)
 	print(f"OPENAI_LOGFILE: {OPENAI_LOGFILE}")
 	print(f"DEVICE: {DEVICE}")
-	print(f"DEBUG: {DEBUG}")
-	print(f"DEBUG_OPENAI: {DEBUG_OPENAI}")
 	print(f"BENCHMARK: {BENCHMARK}")
 	print(f"WORK_DIR: {WORK_DIR}")
 	print(f"C_CODE_FILE: {C_CODE_FILE}")

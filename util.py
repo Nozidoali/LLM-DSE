@@ -10,6 +10,7 @@ from typing import List, Dict, Union, Optional, Tuple
 from config import *
 import signal
 import time
+import random
 
 def extract_parathesis(s):
     return int(re.search(r'\((.*?)\)', s).group(1).replace("~", "").replace("%", ""))/100 if isinstance(s, str) and "(" in s else float("inf")
@@ -30,9 +31,6 @@ def is_valid(results: dict) -> bool:
 def get_perf(results: dict) -> float:
     if is_timeout(results) or not is_valid(results): return float("inf")
     return exclude_parathesis(results["cycles"])
-
-def sort_history(history: list) -> list:
-    return sorted(history, key=lambda x: get_perf(x[2]))
 
 def format_design(design: dict, exclude: list = None) -> str:
     return ", ".join([f"{k} = {v}" for k, v in design.items() if not exclude or k not in exclude])
@@ -99,7 +97,11 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
     minutes, seconds = divmod(int(elapsed), 60)
     return {"compilation time": f"{minutes:02d}min {seconds:02d}sec", **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
 
+def _rand_result():
+    return f"{random.randint(0, 100)} ({random.randint(0, 100)}%)"
+
 def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tuple[Dict[str, str], List[str]]:
+    if DEBUG_MERLIN: return {"cycles": _rand_result(), "lut utilization": _rand_result(), "FF utilization": _rand_result(), "BRAM utilization": _rand_result(), "DSP utilization": _rand_result(), "URAM utilization": _rand_result()}, []
     if DATABASE_IS_VALID:
         import pandas as pd
         df = pd.read_csv(DATABASE_FILE)
@@ -135,7 +137,7 @@ def handle_response_exceptions(func):
         except Exception:
             print(f"WARNING: invalid response received {response}")
             traceback.print_exc()
-            return None if func.__name__ == 'retrieve_index_from_response' else []
+            raise Exception("Invalid response received.")
     return wrapper
 
 @handle_response_exceptions
@@ -251,3 +253,6 @@ def compile_design_space(config_file: str) -> dict:
 
 def get_pragma_type(pragma_name: str) -> str:
     return "parallel" if "PARA" in pragma_name else "tile" if "TILE" in pragma_name else "pipeline"
+
+def get_loop_name(pragma_name: str) -> str:
+    return pragma_name.split('__')[-1]
