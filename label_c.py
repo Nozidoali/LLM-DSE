@@ -1,7 +1,7 @@
 import os
 import re
 
-folder_name = './data/lad25'
+folder_name = './data/pack2'
 
 def label_c(file_in, file_out):
     lines = open(file_in, 'r').readlines()

@@ -58,6 +58,7 @@ class Explorer():
                 if is_timeout(hls_results) or not is_valid(hls_results):
                     candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
+            random.shuffle(candidates)
         if len(candidates) < NUM_BEST_DESIGNS: return list(map(lambda x: x[0], candidates))
         if AUTO_BEST_DESIGN: return list(map(lambda x: x[0], candidates[:NUM_BEST_DESIGNS]))
         try:

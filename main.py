@@ -9,8 +9,9 @@ def llm_dse(c_code):
     explorer = Explorer(c_code, get_default_design(CONFIG_FILE).keys())
     ticks = [time.time()]
     open(TIME_LOGFILE, 'w').close()
-    i_steps = 0
-    while i_steps < MAX_ITER:
+    i_steps, i_iter = 0, 0
+    while i_iter < MAX_ITER:
+        i_iter += 1
         print("-"*80 + f"\nStarting iteration {i_steps}")
         compile_args = [(WORK_DIR, explorer.c_code, design, i_steps + i) for i, (_, design) in enumerate(designs)]
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
@@ -23,7 +24,6 @@ def llm_dse(c_code):
             pragma_warnings = explorer.analyze_warnings(curr_hls_warnings)
             explorer.record_history(i_steps, design, curr_hls_results, pragma_warnings)
             i_steps += 1
-        if i_steps >= MAX_ITER - 1: break
         ticks.append(time.time())
         open(TIME_LOGFILE, 'a').write(f'Iteration {len(ticks)-1}, Total runtime: {ticks[-1] - ticks[0]}, Iteration runtime: {ticks[-1] - ticks[-2]}\n')
         designs = [(design, {**design, pragma_name: pragma_value}) for design, pragma_name, pragma_value in explorer.explore()]
