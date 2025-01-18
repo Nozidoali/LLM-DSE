@@ -86,7 +86,7 @@ class Explorer():
         if len(pragma_updates) <= NUM_CHOSENS: return pragma_updates
         if AUTO_ARBITRATOR: return random.sample(pragma_updates, NUM_CHOSENS)
         try:
-            prompt = compile_arbitrator_prompt(self.c_code, pragma_updates, self.pragma_names)
+            prompt = compile_arbitrator_prompt(self.c_code, pragma_updates)
             return [pragma_updates[_idx] for _idx in retrieve_list_from_response(get_openai_response(prompt))]
         except Exception as e:
             return random.sample(pragma_updates, NUM_CHOSENS)
