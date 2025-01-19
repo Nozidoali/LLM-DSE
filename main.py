@@ -13,6 +13,7 @@ def llm_dse(c_code):
     while i_iter < MAX_ITER:
         i_iter += 1
         print("-"*80 + f"\nStarting iteration {i_steps}")
+        if len(designs) == 0: break
         compile_args = [(WORK_DIR, explorer.c_code, design, i_steps + i) for i, (_, design) in enumerate(designs)]
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             merlin_results = list(executor.map(lambda args: eval_design(*args), compile_args))

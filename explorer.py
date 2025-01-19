@@ -74,20 +74,21 @@ class Explorer():
         explored_values = self.load_history(best_design, pragma_name)
         all_options = [v for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
-        if len(all_options) <= NUM_OPTIMIZATIONS: return[(best_design, pragma_name, v) for v in all_options]
-        if AUTO_OPTIMIZER: return [(best_design, pragma_name, v) for v in all_options[:NUM_OPTIMIZATIONS]]
+        num_updates = NUM_OPTIMIZATIONS if pragma_type != "pipeline" else 1
+        if len(all_options) <= num_updates: return[(best_design, pragma_name, v) for v in all_options]
+        if AUTO_OPTIMIZER: return [(best_design, pragma_name, v) for v in all_options[:num_updates]]
         try:
             update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, all_options, pragma_type, warnings.get(pragma_name, []), explored_values, self.optimizer_reflections[pragma_name])
             return [(best_design, pragma_name, update.get(pragma_name)) for update in retrieve_list_from_response(get_openai_response(update_prompt))]
         except Exception as e:
-            return [(best_design, pragma_name, v) for v in all_options[:NUM_OPTIMIZATIONS]]
+            return [(best_design, pragma_name, v) for v in all_options[:num_updates]]
     
     def select_best_update(self, pragma_updates: List[Tuple[dict, str, str]]) -> Tuple[dict, str, str]:
         if len(pragma_updates) <= NUM_CHOSENS: return pragma_updates
         if AUTO_ARBITRATOR: return random.sample(pragma_updates, NUM_CHOSENS)
         try:
             prompt = compile_arbitrator_prompt(self.c_code, pragma_updates)
-            return [pragma_updates[_idx] for _idx in retrieve_list_from_response(get_openai_response(prompt))]
+            return [pragma_updates[_idx] for _idx in retrieve_indices_from_response(get_openai_response(prompt))]
         except Exception as e:
             return random.sample(pragma_updates, NUM_CHOSENS)
 

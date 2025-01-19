@@ -40,7 +40,7 @@ def format_results(results: dict) -> str:
     return ", ".join([f"{k} = {v}" for k, v in results.items()])
 
 def format_list(l: list) -> str:
-    return ", ".join([str(x) for x in l])
+    return ", ".join([f"\"{x}\"" for x in l])
 
 def format_example(design: dict, results: dict, warnings: List[str]) -> str:
     return ", ".join([
@@ -101,7 +101,9 @@ def _rand_result():
     return f"{random.randint(0, 100)} ({random.randint(0, 100)}%)"
 
 def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tuple[Dict[str, str], List[str]]:
-    if DEBUG_MERLIN: return {"cycles": _rand_result(), "lut utilization": _rand_result(), "FF utilization": _rand_result(), "BRAM utilization": _rand_result(), "DSP utilization": _rand_result(), "URAM utilization": _rand_result()}, []
+    if DEBUG_MERLIN:
+        print(format_design(curr_design)) 
+        return {"cycles": _rand_result(), "lut utilization": _rand_result(), "FF utilization": _rand_result(), "BRAM utilization": _rand_result(), "DSP utilization": _rand_result(), "URAM utilization": _rand_result()}, []
     if DATABASE_IS_VALID:
         import pandas as pd
         df = pd.read_csv(DATABASE_FILE)
@@ -126,7 +128,7 @@ def get_openai_response(prompt, model=GPT_MODEL) -> str:
         ],
         max_tokens=10000,  # Set the largest token numbers
         temperature=0.7,  # Control the randomness of the generative result
-    ).choices[0].message.content if not DEBUG_OPENAI else input(f"DEBUG: {prompt}\n\033[33mENTER response: >\033[0m\n")
+    ).choices[0].message.content if not DEBUG_OPENAI else input(f"{prompt}\n\033[33mENTER response: >\033[0m\n")
     open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
     return(response)
 
@@ -205,7 +207,7 @@ def compile_pragma_update_prompt(best_design: dict, hls_results: Dict[str, str],
     n_optimizations: int = min(NUM_OPTIMIZATIONS, len(all_options) - 1) if pragma_type != "pipeline" else 1
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to update the {pragma_type} pragma {pragma_name}.",
-        f"You must choose {n_optimizations} values among {format_list(all_options)}",
+        f"You must choose {n_optimizations} values among ({format_list(all_options)})",
         *KNOWLEDGE_DATABASE['objective'],
         format_example(best_design, hls_results, hls_warnings),
         "\n".join([f"when changing {pragma_name} to {k}, the results are: {v}" for k, v in explored.items()]),
