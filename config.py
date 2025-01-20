@@ -24,6 +24,7 @@ BENCHMARK: str = args.benchmark
 WORK_DIR: str = os.getenv("WORK_DIR") + f"/work_{BENCHMARK}_{DATE_STR}"
 OPENAI_LOGFILE = f"{WORK_DIR}/openai.log"
 TIME_LOGFILE = f"{WORK_DIR}/time.log"
+CONFIG_LOGFILE = f"{WORK_DIR}/config.json"
 C_CODE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.c")
 CONFIG_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.json")
 PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
@@ -36,11 +37,36 @@ DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FIL
 # Debug mode
 DEBUG_MERLIN: bool = False # DONT CHANGE THIS UNLESS YOU ARE DEBUGGING MERLIN
 DEBUG_OPENAI: bool = False # If we use human response to debug
-AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
+AUTO_BEST_DESIGN: bool = False # Replace OpenAI with hueristic
 AUTO_OPTIMIZER: bool = False # Automatically optimize the design
 AUTO_REFLECTION: bool = True # Automatically generate reflection
 AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
+
+# write the config file
+import json
+open(CONFIG_LOGFILE, "w").write(json.dumps({
+	"DEVICE": DEVICE,
+	"BENCHMARK": BENCHMARK,
+	"WORK_DIR": WORK_DIR,
+	"OPENAI_LOGFILE": OPENAI_LOGFILE,
+	"TIME_LOGFILE": TIME_LOGFILE,
+	"CONFIG_LOGFILE": CONFIG_LOGFILE,
+	"C_CODE_FILE": C_CODE_FILE,
+	"CONFIG_FILE": CONFIG_FILE,
+	"PICKLE_FILE": PICKLE_FILE,
+	"DATABASE_FILE": DATABASE_FILE,
+	"COMPILE_TIMEOUT": COMPILE_TIMEOUT,
+	"ENABLE_DATABASE_LOOKUP": ENABLE_DATABASE_LOOKUP,
+	"DATABASE_IS_VALID": DATABASE_IS_VALID,
+	"DEBUG_MERLIN": DEBUG_MERLIN,
+	"DEBUG_OPENAI": DEBUG_OPENAI,
+	"AUTO_BEST_DESIGN": AUTO_BEST_DESIGN,
+	"AUTO_OPTIMIZER": AUTO_OPTIMIZER,
+	"AUTO_REFLECTION": AUTO_REFLECTION,
+	"AUTO_ARBITRATOR": AUTO_ARBITRATOR,
+	"AUTO_WARNING_ANALYSIS": AUTO_WARNING_ANALYSIS,
+}))
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 

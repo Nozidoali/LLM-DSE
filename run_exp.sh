@@ -6,7 +6,7 @@ result_path=./exp_arb_2
 mode="harvest"
 
 work_dir=/scratch/hanyu
-date_str=20250119_184004 # for harvest
+date_str=20250119_184004  # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)
@@ -22,6 +22,7 @@ while IFS= read -r c_file; do
             cp ${work_dir}/work_${base_name}_${date_str}/results.csv ./${result_path}/${base_name}.csv
             cp ${work_dir}/work_${base_name}_${date_str}/openai.log ./${result_path}/${base_name}.txt
             cp ${work_dir}/work_${base_name}_${date_str}/time.log ./${result_path}/${base_name}.log
+            cp ${work_dir}/work_${base_name}_${date_str}/config.json ./${result_path}/${base_name}.json
         else
             echo "work_${base_name}_${date_str} does not exist in ${work_dir}"
         fi
