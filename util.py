@@ -20,7 +20,7 @@ def exclude_parathesis(s):
 
 def get_default_design(ds_config_file: str) -> dict:
     config_dict = json.load(open(ds_config_file, "r"))["design-space.definition"]
-    return {p: config_dict[p]["default"] for p in config_dict}
+    return {p: str(config_dict[p]["default"]) for p in config_dict}
 
 def is_timeout(results: dict) -> bool:
     return results == {} or "cycles" not in results or results["cycles"] == ""

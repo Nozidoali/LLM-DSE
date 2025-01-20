@@ -48,10 +48,14 @@ class Explorer():
         best_design = history[0][1]
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
-            candidates.append(history[0] + [self.get_info(best_design)])
+            best_design_info = self.get_info(best_design)
+            if best_design_info['remaining space'] != 0:
+                candidates.append(history[0] + [self.get_info(best_design)])
             for step, design, hls_results, pragma_warnings in history[1:]:
                 if is_timeout(hls_results) or not is_valid(hls_results): continue
-                candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
+                design_info = self.get_info(design)
+                if design_info['remaining space'] != 0:
+                    candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
             for step, design, hls_results, pragma_warnings in history:
