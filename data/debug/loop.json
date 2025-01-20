@@ -1,0 +1,12 @@
+{
+	"design-space.definition" : 
+	{
+		"__PARA__L0" : 
+		{
+			"default" : 1,
+			"ds_type" : "PARALLEL",
+			"options" : "[x for x in [1,2,4,8,16,32,64,128]]",
+			"order" : "0"
+		}
+	}
+}
