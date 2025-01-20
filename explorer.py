@@ -76,16 +76,16 @@ class Explorer():
         pragma_type = get_pragma_type(pragma_name)
         _, best_design, hls_results, warnings = self.exploration_history[from_idx]
         explored_values = self.load_history(best_design, pragma_name)
-        all_options = [v for v in self.ds_config[pragma_name] 
+        all_options = [str(v) for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
         num_updates = NUM_OPTIMIZATIONS if pragma_type != "pipeline" else 1
-        if len(all_options) <= num_updates: return[(best_design, pragma_name, v) for v in all_options]
-        if AUTO_OPTIMIZER: return [(best_design, pragma_name, v) for v in all_options[:num_updates]]
+        if len(all_options) <= num_updates: return[(best_design, pragma_name, str(v)) for v in all_options]
+        if AUTO_OPTIMIZER: return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
         try:
             update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, all_options, pragma_type, warnings.get(pragma_name, []), explored_values, self.optimizer_reflections[pragma_name])
-            return [(best_design, pragma_name, update.get(pragma_name)) for update in retrieve_list_from_response(get_openai_response(update_prompt))]
+            return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt))]
         except Exception as e:
-            return [(best_design, pragma_name, v) for v in all_options[:num_updates]]
+            return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
     
     def select_best_update(self, pragma_updates: List[Tuple[dict, str, str]]) -> Tuple[dict, str, str]:
         if len(pragma_updates) <= NUM_CHOSENS: return pragma_updates
