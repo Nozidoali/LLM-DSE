@@ -1,12 +1,12 @@
 #!/bin/bash
 folder_path=./data/lad25
-result_path=./exp_arb
+result_path=./exp_arb_2
 
-mode="run"
-# mode="harvest"
+# mode="run"
+mode="harvest"
 
 work_dir=/scratch/hanyu
-date_str=20250119_092729 # for harvest
+date_str=20250119_184004 # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)
