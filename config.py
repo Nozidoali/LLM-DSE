@@ -39,7 +39,7 @@ DEBUG_OPENAI: bool = False # If we use human response to debug
 AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
 AUTO_OPTIMIZER: bool = False # Automatically optimize the design
 AUTO_REFLECTION: bool = True # Automatically generate reflection
-AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
+AUTO_ARBITRATOR: bool = True # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
