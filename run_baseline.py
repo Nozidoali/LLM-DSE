@@ -3,7 +3,7 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 
 BASELINE_DIR = './baseline'
-BASELINE_WORK_DIR = '/scratch/hanyu/baseline'
+BASELINE_WORK_DIR = '/scratch/alicewu/baseline-2'
 DATA_DIR = './data/lad25'
 
 idx = 0
@@ -15,11 +15,12 @@ for file in os.listdir(BASELINE_DIR):
         design = json.load(open(f'{BASELINE_DIR}/{file}', 'r'))
         names = file.split('.')[0].split('-')
         kernel, shot, index, know, arbitrator = '-'.join(names[:-4]), names[-4], names[-3], names[-2], names[-1]
+        if index != "2": continue
         c_code = open(f'{DATA_DIR}/{kernel}.c', 'r').read()
         print(f'Running {file}')
         idx += 1
         compile_args.append((BASELINE_WORK_DIR, c_code, design, idx))
-with ThreadPoolExecutor(max_workers=8) as executor:   
+with ThreadPoolExecutor(max_workers=15) as executor:   
     merlin_results = list(executor.map(lambda args: eval_design(*args), compile_args))
     
 for i, merlin_result in enumerate(merlin_results):

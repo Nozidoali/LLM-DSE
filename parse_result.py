@@ -2,7 +2,7 @@ from util import *
 import pandas as pd
 
 DATA_DIR = './data/lad25'
-BASELINE_WORK_DIR = '/scratch/hanyu/baseline'
+BASELINE_WORK_DIR = '/scratch/alicewu/baseline'
 BASELINE_DIR = './baseline'
 
 def find_kernel(c_file:str):
@@ -51,7 +51,7 @@ def match_design(design:dict, kernel_name:str):
 
 datas = {}
 
-for i in range(0, 121, 1):
+for i in range(1, 61, 1):
     merlin_rpt_file = f'{BASELINE_WORK_DIR}/{i}/merlin.rpt'
     merlin_log_file = f'{BASELINE_WORK_DIR}/{i}/merlin.log'
     merlin_rpt = parse_merlin_rpt(merlin_rpt_file)
@@ -62,13 +62,13 @@ for i in range(0, 121, 1):
     design = parse_design(kernel_name, c_file)
     print(design)
     kernel, shot, index, know, arbitrator = match_design(design, kernel_name)
-    # assert(index!=7)
+    assert(index!=7)
     if kernel not in datas:
         datas[kernel] = []
     datas[kernel].append({**design, **merlin_rpt, 'kernel': kernel, 'shot': shot, 'know': know, 'arbitrator': arbitrator})
     if not os.path.exists(f'{BASELINE_DIR}/{kernel}'):
         os.makedirs(f'{BASELINE_DIR}/{kernel}')
-    pd.DataFrame(datas[kernel]).to_csv(f'{BASELINE_DIR}/{kernel}/result-all.csv', index=False)
+    pd.DataFrame(datas[kernel]).to_csv(f'{BASELINE_DIR}/{kernel}/result-7.csv', index=False)
 
 
 

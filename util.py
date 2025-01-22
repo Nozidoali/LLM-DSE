@@ -5,12 +5,15 @@ import subprocess
 import openai
 import traceback
 import pickle
-import torch
+# import torch
 from typing import List, Dict, Union, Optional, Tuple
 from config import *
 import signal
 import time
 import random
+from datetime import timedelta
+import tiktoken
+
 
 def extract_parathesis(s):
     return int(re.search(r'\((.*?)\)', s).group(1).replace("~", "").replace("%", ""))/100 if isinstance(s, str) and "(" in s else float("inf")
@@ -55,11 +58,11 @@ def designs_are_adjacent(design1: dict, design2: dict) -> bool:
 def designs_are_equal(design1: dict, design2: dict) -> bool:
     return all([design1[k] == design2[k] for k in design1.keys()])
 
-def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
-    results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
-    selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
-    print(f"INFO: selected {len(selected)} designs from {len(results)} designs")
-    return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for d in selected]
+# def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
+#     results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
+#     selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
+#     print(f"INFO: selected {len(selected)} designs from {len(results)} designs")
+#     return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for d in selected]
 
 def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int) -> str:
     curr_dir = os.path.join(work_dir, f"{idx}/")
@@ -258,3 +261,47 @@ def get_pragma_type(pragma_name: str) -> str:
 
 def get_loop_name(pragma_name: str) -> str:
     return pragma_name.split('__')[-1]
+
+def num_tokens_from_messages(messages, model="gpt-4o"):
+    """Return the number of tokens used by a list of messages."""
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        print("Warning: model not found. Using o200k_base encoding.")
+        encoding = tiktoken.get_encoding("o200k_base")
+    if model in {
+        "gpt-3.5-turbo-0125",
+        "gpt-4-0314",
+        "gpt-4-32k-0314",
+        "gpt-4-0613",
+        "gpt-4-32k-0613",
+        "gpt-4o-mini-2024-07-18",
+        "gpt-4o-2024-08-06"
+        }:
+        tokens_per_message = 3
+        tokens_per_name = 1
+    elif "gpt-3.5-turbo" in model:
+        print("Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0125.")
+        return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0125")
+    elif "gpt-4o-mini" in model:
+        print("Warning: gpt-4o-mini may update over time. Returning num tokens assuming gpt-4o-mini-2024-07-18.")
+        return num_tokens_from_messages(messages, model="gpt-4o-mini-2024-07-18")
+    elif "gpt-4o" in model:
+        print("Warning: gpt-4o and gpt-4o-mini may update over time. Returning num tokens assuming gpt-4o-2024-08-06.")
+        return num_tokens_from_messages(messages, model="gpt-4o-2024-08-06")
+    elif "gpt-4" in model:
+        print("Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+        return num_tokens_from_messages(messages, model="gpt-4-0613")
+    else:
+        raise NotImplementedError(
+            f"""num_tokens_from_messages() is not implemented for model {model}."""
+        )
+    num_tokens = 0
+    for message in messages:
+        num_tokens += tokens_per_message
+        for key, value in message.items():
+            num_tokens += len(encoding.encode(value))
+            if key == "name":
+                num_tokens += tokens_per_name
+    num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
+    return num_tokens
