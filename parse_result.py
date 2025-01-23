@@ -51,6 +51,9 @@ def match_design(design:dict, kernel_name:str):
 
 datas = {}
 
+pragma_pattern = re.compile(r'__(PARA|TILE|PIPE)__')
+pattern = re.compile(r'compilation time|cycles|lut utilization|FF utilization|BRAM utilization|DSP utilization|URAM utilization|__(PARA|TILE|PIPE)__')
+
 for i in range(1, 61, 1):
     merlin_rpt_file = f'{BASELINE_WORK_DIR}/{i}/merlin.rpt'
     merlin_log_file = f'{BASELINE_WORK_DIR}/{i}/merlin.log'

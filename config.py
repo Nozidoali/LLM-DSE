@@ -38,9 +38,9 @@ DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FIL
 DEBUG_MERLIN: bool = False # DONT CHANGE THIS UNLESS YOU ARE DEBUGGING MERLIN
 DEBUG_OPENAI: bool = False # If we use human response to debug
 AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
-AUTO_OPTIMIZER: bool = False # Automatically optimize the design
+AUTO_OPTIMIZER: bool = True # Automatically optimize the design
 AUTO_REFLECTION: bool = True # Automatically generate reflection
-AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
+AUTO_ARBITRATOR: bool = True # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
