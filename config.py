@@ -1,5 +1,4 @@
-import os
-import dotenv
+import os, dotenv
 import argparse
 
 from datetime import datetime
@@ -45,6 +44,7 @@ AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
+
 # write the config file
 import json
 open(CONFIG_LOGFILE, "w").write(json.dumps({
@@ -155,7 +155,23 @@ KNOWLEDGE_DATABASE = {
 		f"  (3) What was the major differences in the two resutls? How did the change in pragma value affect the results?", 
 		f"  (4) How would you explain the change in the performance, resource utilization and compilation time given the code structure?",
 	],
+	"warning_analysis": [
+        f"For example, if you have the following warning:",
+        f"WARNING: [CGPIP-208] Coarse-grained pipelining NOT applied on loop 'Lx' (top.c:YY)",
+        f"It means that the coarse-grained pipelining is not applied on loop 'Lx' at line YY.",
+        f"In this example, you should consider this warning when updating the pipeline pragma for loop 'Lx', i.e., __PIPE__Lx.",
+ 	],
+	"objective": [
+        f"The objective is to optimize the performance (reduce the cycle count) while keeping the resource utilization under 80% and the compilation time under {COMPILE_TIMEOUT_MINUTES} minutes."
+	],
 }
+
+def REGULATE_OUTPUT(output_type: str, *args):
+	if output_type == "index list":
+		n_total, n_output = args
+		return f"You must skip the reasoning and output a list of integer values separated by ',' and the values should range from 0 to {n_total} representing the top {n_output} choices among the given options."
+	else:
+		raise NotImplementedError(f"Output type {output_type} is not implemented.")
 
 # Constants:
 KERNEL_NAME: str = "top"

@@ -5,7 +5,6 @@ import subprocess
 import openai
 import traceback
 import pickle
-# import torch
 from typing import List, Dict, Union, Optional, Tuple
 from config import *
 import signal
@@ -57,12 +56,6 @@ def designs_are_adjacent(design1: dict, design2: dict) -> bool:
 
 def designs_are_equal(design1: dict, design2: dict) -> bool:
     return all([design1[k] == design2[k] for k in design1.keys()])
-
-# def load_designs_from_pickle(pickle_file: str, n_best: int = 10) -> List[dict]:
-#     results = [d for _, d in pickle.load(open(pickle_file, "rb")).items()]
-#     selected = sorted(results, key=lambda x: x.perf, reverse=True)[:n_best]
-#     print(f"INFO: selected {len(selected)} designs from {len(results)} designs")
-#     return [{k: (v.item() if torch.is_tensor(v) else v) for k, v in d.point.items()} for d in selected]
 
 def apply_design_to_code(work_dir: str, c_code: str, curr_design: dict, idx: int) -> str:
     curr_dir = os.path.join(work_dir, f"{idx}/")
