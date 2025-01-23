@@ -11,8 +11,15 @@ result_folders = [
     # 'results0110',
     # 'results0112',
     # 'results0114',
-    'results0116_1',
-    'results0116_2',
+    # 'results0116_1',
+    # 'results0116_2',
+    'exp_arb_1',
+    'exp_arb_2',
+    'exp_heuristic',
+    'exp_jacobi',
+    'exp_opt',
+    'exp_opt_arb',
+    'exp_opt_arb_bes',
 ]
 database_folder = './data/compilation_results'
 
