@@ -50,6 +50,9 @@ def format_example(design: dict, results: dict, warnings: List[str]) -> str:
         f"the result is: {format_results(results)}",
         (f"with warnings: {format_list(warnings)}" if warnings else "")
     ])
+    
+def extract_dict(design_str: str) -> Dict[str, str]:
+    return {k.strip(): v.strip() for k, v in re.findall(r'(\w+(?: \w+)*)\s*=\s*([^\s,]+)', design_str)}
 
 def designs_are_adjacent(design1: dict, design2: dict) -> bool:
     return sum([design1[k] != design2[k] for k in design1.keys()]) == 1
@@ -93,7 +96,8 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
     minutes, seconds = divmod(int(elapsed), 60)
     return {"compilation time": f"{minutes:02d}min {seconds:02d}sec", **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
 
-def _rand_result():
+def _rand_result(rand=False):
+    if not rand: return "0 (0%)"
     return f"{random.randint(0, 100)} ({random.randint(0, 100)}%)"
 
 def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tuple[Dict[str, str], List[str]]:
@@ -103,6 +107,9 @@ def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tupl
     if DATABASE_IS_VALID:
         import pandas as pd
         df = pd.read_csv(DATABASE_FILE)
+        for col in list(curr_design.keys()): 
+            if pd.api.types.is_numeric_dtype(df[col]):
+                df[col] = df[col].astype(int).astype(str)
         matched_results = df[(df[list(curr_design.keys())] == pd.Series(curr_design)).all(axis=1)]
         if len(matched_results) > 0:
             datas = matched_results.drop(columns=list(curr_design.keys())).to_dict(orient='records')
@@ -115,7 +122,7 @@ def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tupl
     print(f"INFO: havest after compilation {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
     return merlin_results, merlin_log
 
-def get_openai_response(prompt, model=GPT_MODEL) -> str:
+def get_openai_response(prompt, model=GPT_MODEL, temperature=0.7) -> str:
     response = openai.chat.completions.create(
         model=model,
         messages=[
@@ -123,7 +130,7 @@ def get_openai_response(prompt, model=GPT_MODEL) -> str:
             {"role": "user", "content": prompt}
         ],
         max_tokens=10000,  # Set the largest token numbers
-        temperature=0.7,  # Control the randomness of the generative result
+        temperature=temperature,  # Control the randomness of the generative result
     ).choices[0].message.content if not DEBUG_OPENAI else input(f"{prompt}\n\033[33mENTER response: >\033[0m\n")
     open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
     return(response)

@@ -71,6 +71,9 @@ open(CONFIG_LOGFILE, "w").write(json.dumps({
 }))
 
 
+# Some constants:
+RESULT_KEYS = ["cycles", "lut utilization", "FF utilization", "BRAM utilization", "DSP utilization", "URAM utilization"]
+
 GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 
 NUM_BEST_DESIGN_CANIDATES = 10

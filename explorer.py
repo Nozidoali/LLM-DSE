@@ -41,10 +41,25 @@ class Explorer():
             except Exception as e:
                 pass
         return pragma_warnings
+    
+    def filter_history(self, history, get_result: callable):
+        seen = set()
+        unique_history = []
+        for x in history:
+            hls_result = get_result(x)
+            if is_timeout(hls_result): 
+                unique_history.append(x)
+                continue
+            identifier = tuple(hls_result[k] for k in RESULT_KEYS)
+            if identifier not in seen:
+                seen.add(identifier)
+                unique_history.append(x)
+        return unique_history
 
     def select_best_designs(self, pragma_name: str) -> List[int]:
         pragma_type = get_pragma_type(pragma_name)
         history = sorted(self.exploration_history, key=lambda x: get_perf(x[2]))
+        history = self.filter_history(history, lambda x: x[2])
         best_design = history[0][1]
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
@@ -76,6 +91,9 @@ class Explorer():
         pragma_type = get_pragma_type(pragma_name)
         _, best_design, hls_results, warnings = self.exploration_history[from_idx]
         explored_values = self.load_history(best_design, pragma_name)
+        filtered_explored_values = self.filter_history(list(explored_values.values()), extract_dict)
+        explored_hls_results = list(explored_values.values())
+        if len(explored_hls_results) != len(filtered_explored_values): return []
         all_options = [str(v) for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
         num_updates = NUM_OPTIMIZATIONS if pragma_type != "pipeline" else 1
