@@ -133,7 +133,7 @@ class Analyzer:
                     self.graph.add_edge(pydot.Edge(self.serialize_design(old_design, self.pragma_names), self.serialize_design(new_design, self.pragma_names)))
     
         best_perf = min(get_perf(self.result_at(i).to_dict()) for i in range(max_step))
-        print(f"Best performance: {best_perf} at step {max_step}, iteration {max_iter}")
+        print(f"{args.benchmark},{best_perf}")
     
     def to_dot(self, filename: str):
         self.graph.write_dot(filename)

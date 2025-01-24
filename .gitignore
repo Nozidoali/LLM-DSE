@@ -16,3 +16,4 @@ __pycache__/
 baseline
 
 *.json
+*.dot
