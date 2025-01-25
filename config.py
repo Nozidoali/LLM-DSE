@@ -31,16 +31,16 @@ PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
 DATABASE_FILE: str = os.path.join(DATABASE_FOLDER, f"{BENCHMARK}.csv")
 COMPILE_TIMEOUT_MINUTES: int = 60
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
-ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip some useful warnings
+ENABLE_DATABASE_LOOKUP: bool = False # find results from database, this may skip some useful warnings
 DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
 
 # Debug mode
 DEBUG_MERLIN: bool = False # DONT CHANGE THIS UNLESS YOU ARE DEBUGGING MERLIN
 DEBUG_OPENAI: bool = False # If we use human response to debug
 AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
-AUTO_OPTIMIZER: bool = True # Automatically optimize the design
+AUTO_OPTIMIZER: bool = False # Automatically optimize the design
 AUTO_REFLECTION: bool = True # Automatically generate reflection
-AUTO_ARBITRATOR: bool = True # Automatically choose the best pragma
+AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
@@ -84,7 +84,7 @@ SELF_REFLECTION_LENGTH = 10
 # DSE
 MAX_ITER = 500
 NUM_BEST_DESIGNS = 2
-NUM_OPTIMIZATIONS = 2
+NUM_OPTIMIZATIONS = 3
 NUM_CHOSENS = 8
 MAX_WORKERS = NUM_CHOSENS * NUM_BEST_DESIGNS
 
@@ -118,7 +118,7 @@ KNOWLEDGE_DATABASE = {
 		f"	(2) When the cycle count is the same, you should choose the design with lower resource utilization.",
 		f"	(3) Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
 		f"	(4) When the performances are similar, you should choose the design with more room for improvement.",
-		f"	(5) Beyond all the metrics, you should avoid choosing the design that has been exhaustively explored (i.e., has fewer remaining search spaces left).",
+		f"	(5) Besides all the metrics above, you should priority the design that has more remaining search spaces left).",
 	],
 	'parallel': [
 		f"Here is some knowledge about the __PARA__LX pragma:",
@@ -155,7 +155,7 @@ KNOWLEDGE_DATABASE = {
 		f"Some examples of reflection questions are:",
 		f"  (1) What was the change in the design and how did that affect the performance, resource utilization and compilation time?", 
 		f"  (2) What was the difference in the two sets of warnings? Did the change in pragma value affect the warnings?",
-		f"  (3) What was the major differences in the two resutls? How did the change in pragma value affect the results?", 
+		f"  (3) What was the major differences in the two results? How did the change in pragma value affect the results?", 
 		f"  (4) How would you explain the change in the performance, resource utilization and compilation time given the code structure?",
 	],
 	"warning_analysis": [

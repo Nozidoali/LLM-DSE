@@ -21,7 +21,7 @@ def llm_dse(c_code):
             prev_design, design = designs[i]
             prev_hls_results, prev_hls_warnings = explorer.load_results(prev_design)
             curr_hls_results, curr_hls_warnings = merlin_result
-            explorer.self_reflection(prev_design, design, prev_hls_results, prev_hls_warnings, curr_hls_results, curr_hls_warnings)
+            explorer.self_reflection(prev_design, design, prev_hls_results, prev_hls_warnings, curr_hls_results, curr_hls_warnings, explorer.get_index(prev_design), i_steps)
             pragma_warnings = explorer.analyze_warnings(curr_hls_warnings)
             explorer.record_history(i_steps, design, curr_hls_results, pragma_warnings)
             i_steps += 1

@@ -3,6 +3,7 @@ import pandas as pd
 
 DATA_DIR = './data/lad25'
 BASELINE_WORK_DIR = '/home/alicewu/lad25/cs259-llm-dse/baseline'
+# BASELINE_WORK_DIR = '/scratch/alicewu/'
 BASELINE_DIR = './baseline'
 BENCHMARK_SUITES = ["3mm", "atax-medium", "covariance", "fdtd-2d", "gemm-p", "gemver-medium", "jacobi-2d", "symm-opt", "syr2k", "trmm-opt"]
 
@@ -31,6 +32,8 @@ def parse_design(kernel_name:str, c_file:str):
             design[key] = value
         elif "TILE" in c_line:
             key = re.search(r"auto\{(.*?)\}", c_line).group(1)
+            if re.search(r"PARALLEL\s+(\w+)", d_line) == None:
+                print(d_line)
             value = re.search(r"FACTOR\s*=\s*(\d+)", d_line).group(1)
             design[key] = value
         elif "PARALLEL" in c_line:
@@ -50,31 +53,79 @@ def match_design(design:dict, kernel_name:str):
                 print(kernel, shot, index, know, arbitrator)
                 return kernel, shot, index, know, arbitrator
 
+KERNEL_ID = {
+    "3mm": 1,
+    "atax-medium": 2,
+    "covariance": 3,
+    "fdtd-2d": 4,
+    "gemm-p": 5,
+    "gemver-medium": 6,
+    "jacobi-2d": 7,
+    "symm-opt": 8,
+    "syr2k": 9,
+    "trmm-opt": 10
+}
+
+def get_design_id(kernel_name: str, shot: str, know: str, arbitrator: str) -> int:
+    base_id = (KERNEL_ID[kernel_name] - 1) * 6 + (3 if shot == "zero" else 0)
+    if know == "False": return base_id
+    return base_id + 1 if arbitrator == "False" else base_id + 2
+
+def _p(s: dict):
+    return {k: str(v) for k, v in s.items()}
+
 def load():
     datas = {}
-
-    for j in range(8):
-        CURRENT_DIR = f'{BASELINE_WORK_DIR}/baseline-{j}'
-        for i in range(1, 61, 1):
-            merlin_rpt_file = f'{CURRENT_DIR}/{i}/merlin.rpt'
-            merlin_log_file = f'{CURRENT_DIR}/{i}/merlin.log'
-            merlin_rpt = parse_merlin_rpt(merlin_rpt_file)
-            merlin_log = parse_merlin_log(merlin_log_file)
-            if os.path.exists(f'{CURRENT_DIR}/{i}/src'):
-                c_file = f'{CURRENT_DIR}/{i}/src/top.c'
-            else:
-                c_file = f'{CURRENT_DIR}/{i}/top.c'
-            kernel_name = find_kernel(c_file)
-            print(kernel_name)
-            design = parse_design(kernel_name, c_file)
-            print(design)
-            kernel, shot, index, know, arbitrator = match_design(design, kernel_name)
+    for file in os.listdir(BASELINE_DIR):
+        if file.endswith('.json'):
+            names = file.split('.')[0].split('-')
+            design = json.load(open(f'{BASELINE_DIR}/{file}', 'r'))
+            kernel, shot, index, know, arbitrator = '-'.join(names[:-4]), names[-4], names[-3], names[-2], names[-1]
+            CURRENT_DIR = f'{BASELINE_WORK_DIR}/baseline-{index}'
+            print(f"processing {index}")
+            idx = None
+            for _idx in range(1, 61, 1):
+                c_file = f'{CURRENT_DIR}/{_idx}/src/top.c'
+                if not os.path.exists(c_file):
+                    c_file = f'{CURRENT_DIR}/{_idx}/top.c'
+                kernel_name = find_kernel(c_file)
+                if not kernel_name in kernel: continue
+                _design = parse_design(kernel_name, c_file)
+                print(f"found candidate idx {_idx}, design {_design}")
+                if _p(_design) == _p(design):
+                    idx = _idx
+            assert idx, f"no match for design {design} of kernel {kernel}"
+            # idx = get_design_id(kernel, shot, know, arbitrator)
+            merlin_rpt = parse_merlin_rpt(f'{CURRENT_DIR}/{idx}/merlin.rpt')
             if kernel not in datas:
                 datas[kernel] = []
-            datas[kernel].append({**design, **merlin_rpt, 'kernel': kernel, 'shot': shot, 'know': know, 'arbitrator': arbitrator})
+            datas[kernel].append({**design, **merlin_rpt, 'kernel': kernel, 'shot': shot, 'know': know, 'arbitrator': arbitrator, 'fidx': idx, 'index': index})
             if not os.path.exists(f'{BASELINE_DIR}/{kernel}'):
                 os.makedirs(f'{BASELINE_DIR}/{kernel}')
             pd.DataFrame(datas[kernel]).to_csv(f'{BASELINE_DIR}/{kernel}/result.csv')
+            
+    # for j in range(8):
+    #     CURRENT_DIR = f'{BASELINE_WORK_DIR}/baseline-{j}'
+    #     for i in range(1, 61, 1):
+    #         merlin_rpt_file = f'{CURRENT_DIR}/{i}/merlin.rpt'
+    #         merlin_log_file = f'{CURRENT_DIR}/{i}/merlin.log'
+    #         merlin_rpt = parse_merlin_rpt(merlin_rpt_file)
+    #         merlin_log = parse_merlin_log(merlin_log_file)
+    #         if os.path.exists(f'{CURRENT_DIR}/{i}/src'):
+    #             c_file = f'{CURRENT_DIR}/{i}/src/top.c'
+    #         else:
+    #             c_file = f'{CURRENT_DIR}/{i}/top.c'
+    #         kernel_name = find_kernel(c_file)
+    #         print(kernel_name)
+    #         design = parse_design(kernel_name, c_file)
+    #         print(design)
+    #         kernel, shot, index, know, arbitrator = match_design(design, kernel_name)
+    #         if kernel not in datas:
+    #             datas[kernel] = []
+    #         datas[kernel].append({**design, **merlin_rpt, 'kernel': kernel, 'shot': shot, 'know': know, 'arbitrator': arbitrator})
+    #         if not os.path.exists(f'{BASELINE_DIR}/{kernel}'):
+    #             os.makedirs(f'{BASELINE_DIR}/{kernel}')
+    #         pd.DataFrame(datas[kernel]).to_csv(f'{BASELINE_DIR}/{kernel}/result.csv')
 
 def extract_parathesis(s):
     return int(re.search(r'\((.*?)\)', s).group(1).replace("~", "").replace("%", ""))/100 if isinstance(s, str) and "(" in s else INT_MAX
@@ -82,6 +133,8 @@ def exclude_parathesis(s):
     return int(s.split("(")[0].strip()) if isinstance(s, str) and "(" in s else INT_MAX
 
 INT_MAX = 2**31 - 1
+
+CALC_AVG_STD = True
 
 def process_result():
     results = []
@@ -100,46 +153,64 @@ def process_result():
                     df_["perf"] = df_["cycles"]
                     df_.loc[df_["max util."] > 0.8, "perf"] = INT_MAX
                     best_perf = df_["perf"].min()
+                    
+                    best_idx = df_[df_["perf"] == best_perf]["index"].values[0]
+                    best_fidx = df_[df_["perf"] == best_perf]["fidx"].values[0]
+                    
+                    if CALC_AVG_STD:
+                        # filter out INT_MAX
+                        df_filtered = df_[df_["perf"] != INT_MAX]
+                        avg_perf = df_filtered["perf"].mean()
+                        std_perf = df_filtered["perf"].std()
+                        num_valid = len(df_filtered)
+                    
                     print(f"{bmark},{shot},{know},{arbitrator},{best_perf}")
-                    results.append({
+                    _data = {
                         "bmark": bmark,
                         "shot": shot,
                         "know": know,
                         "arbitrator": arbitrator,
-                        "best_perf": best_perf
-                    })
-    pd.DataFrame(results).to_csv(f'{BASELINE_WORK_DIR}/best.csv', index=False)
+                        "best_perf": best_perf,
+                        "best_idx": best_idx,
+                        "best_fidx": best_fidx
+                    }
+                    
+                    if CALC_AVG_STD:
+                        _data["avg_perf"] = avg_perf
+                        _data["std_perf"] = std_perf
+                        _data["num_valid"] = num_valid
+                    
+                    results.append(_data)
+    if CALC_AVG_STD:
+        pd.DataFrame(results).to_csv(f'{BASELINE_WORK_DIR}/best_avg_std.csv', index=False)
+    else:
+        pd.DataFrame(results).to_csv(f'{BASELINE_WORK_DIR}/best.csv', index=False)
+
+def print_excel(csv_file: str):
+    df = pd.read_csv(csv_file)
+    df['combined'] = df['shot'] + '-' + df['know'].astype(str) + '-' + df['arbitrator'].astype(str)
+    df = df.pivot(index='bmark', columns='combined', values='avg_perf')
+    columns_order = sorted([col for col in df.columns], key=lambda x: x.startswith('one'))
+    print(columns_order)
+    df = df[columns_order]
+    df.to_csv(f'{BASELINE_WORK_DIR}/best_perf.csv')
+        
+
+# load()
+# process_result()
+print_excel(f'{BASELINE_WORK_DIR}/best_avg_std.csv')
 
 
-process_result()
+# for j in range(8):
+#     CURRENT_DIR = f'{BASELINE_WORK_DIR}/baseline-{j}'
+#     kernel_names = []
+#     for i in range(1, 61, 1):
+#         c_file = f'{CURRENT_DIR}/{i}/src/top.c'
+#         if not os.path.exists(c_file):
+#             c_file = f'{CURRENT_DIR}/{i}/top.c'
+#         kernel_name = find_kernel(c_file)
+#         kernel_names.append(kernel_name)
 
-
-pragma_pattern = re.compile(r'__(PARA|TILE|PIPE)__')
-pattern = re.compile(r'compilation time|cycles|lut utilization|FF utilization|BRAM utilization|DSP utilization|URAM utilization|__(PARA|TILE|PIPE)__')
-
-for i in range(1, 61, 1):
-    merlin_rpt_file = f'{BASELINE_WORK_DIR}/{i}/merlin.rpt'
-    merlin_log_file = f'{BASELINE_WORK_DIR}/{i}/merlin.log'
-    merlin_rpt = parse_merlin_rpt(merlin_rpt_file)
-    merlin_log = parse_merlin_log(merlin_log_file)
-    c_file = f'{BASELINE_WORK_DIR}/{i}/src/top.c'
-    kernel_name = find_kernel(c_file)
-    print(kernel_name)
-    design = parse_design(kernel_name, c_file)
-    print(design)
-    kernel, shot, index, know, arbitrator = match_design(design, kernel_name)
-    assert(index!=7)
-    if kernel not in datas:
-        datas[kernel] = []
-    datas[kernel].append({**design, **merlin_rpt, 'kernel': kernel, 'shot': shot, 'know': know, 'arbitrator': arbitrator})
-    if not os.path.exists(f'{BASELINE_DIR}/{kernel}'):
-        os.makedirs(f'{BASELINE_DIR}/{kernel}')
-    pd.DataFrame(datas[kernel]).to_csv(f'{BASELINE_DIR}/{kernel}/result-7.csv', index=False)
-
-
-
-            
-
-
-
-
+#     # count 
+#     from collections import Counter
+#     print(Counter(kernel_names))

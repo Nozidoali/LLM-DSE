@@ -7,6 +7,7 @@ class Explorer():
         self.c_code = c_code[:]
         self.ds_config = compile_design_space(CONFIG_FILE)
         self.exploration_history, self.datas = [], []
+        self.useful_history_idx, self.useless_pragma = [0], [[]]
         self.pragma_names: List[str] = list(pragma_names)[:]
         self.optimizer_reflections: Dict[str, List[str]] = {p: [] for p in pragma_names}
         
@@ -29,6 +30,10 @@ class Explorer():
             "remaining space": sum((num_total(pragma_name) - num_explored(pragma_name) for pragma_name in self.pragma_names)), 
             "total space": sum((num_total(pragma_name) for pragma_name in self.pragma_names))
         }
+        
+    def get_index(self, design: dict) -> int:
+       index = next((x[0] for x in self.exploration_history if x[1] == design), None)
+       return index
         
     def analyze_warnings(self, warnings: List[str]) -> Dict[str, List[str]]:
         pragma_warnings = {}
@@ -58,22 +63,23 @@ class Explorer():
 
     def select_best_designs(self, pragma_name: str) -> List[int]:
         pragma_type = get_pragma_type(pragma_name)
-        history = sorted(self.exploration_history, key=lambda x: get_perf(x[2]))
-        history = self.filter_history(history, lambda x: x[2])
-        best_design = history[0][1]
+        # history = sorted(self.exploration_history, key=lambda x: get_perf(x[2]))
+        useful_history = [self.exploration_history[i] for i in self.useful_history_idx]
+        useful_history = sorted(useful_history, key=lambda x: get_perf(x[2]))
+        best_design = useful_history[0][1]
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
             best_design_info = self.get_info(best_design)
             if best_design_info['remaining space'] != 0:
-                candidates.append(history[0] + [self.get_info(best_design)])
-            for step, design, hls_results, pragma_warnings in history[1:]:
+                candidates.append(useful_history[0] + [self.get_info(best_design)])
+            for step, design, hls_results, pragma_warnings in useful_history[1:]:
                 if is_timeout(hls_results) or not is_valid(hls_results): continue
                 design_info = self.get_info(design)
                 if design_info['remaining space'] != 0:
                     candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
-            for step, design, hls_results, pragma_warnings in history:
+            for step, design, hls_results, pragma_warnings in useful_history:
                 if is_timeout(hls_results) or not is_valid(hls_results):
                     candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
@@ -88,12 +94,13 @@ class Explorer():
             return list(map(lambda x: x[0], candidates[:NUM_BEST_DESIGNS]))
     
     def propose_update(self, from_idx: int, pragma_name: str) -> dict:
+        if pragma_name in self.useless_pragma[self.useful_history_idx.index(from_idx)]: return []
         pragma_type = get_pragma_type(pragma_name)
         _, best_design, hls_results, warnings = self.exploration_history[from_idx]
         explored_values = self.load_history(best_design, pragma_name)
-        filtered_explored_values = self.filter_history(list(explored_values.values()), extract_dict)
-        explored_hls_results = list(explored_values.values())
-        if len(explored_hls_results) != len(filtered_explored_values): return []
+        # filtered_explored_values = self.filter_history(list(explored_values.values()), extract_dict)
+        # explored_hls_results = list(explored_values.values())
+        # if len(explored_hls_results) != len(filtered_explored_values): return []
         all_options = [str(v) for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
         num_updates = NUM_OPTIMIZATIONS if pragma_type != "pipeline" else 1
@@ -123,9 +130,26 @@ class Explorer():
 
     def self_reflection(self, prev_design: dict, curr_design: dict, 
             prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]],
-            curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]]):
+            curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]],
+            prev_idx: int, curr_idx: int):
         if not prev_hls_results or not curr_hls_results: return
-        if AUTO_REFLECTION: return
+        if AUTO_REFLECTION: 
+            if is_timeout(curr_hls_results):
+                if curr_hls_results["compilation time"].split("min")[0].strip() == str(COMPILE_TIMEOUT_MINUTES): 
+                    self.useful_history_idx.append(curr_idx)
+                    self.useless_pragma.append([])
+            else:
+                prev_hls_results_nt = {k: prev_hls_results[k] for k in RESULT_KEYS}
+                curr_hls_results_nt = {k: curr_hls_results[k] for k in RESULT_KEYS}
+                if prev_hls_results_nt == curr_hls_results_nt:
+                    for k, v in curr_design.items():
+                        if v != prev_design[k]:
+                            self.useless_pragma[prev_idx].append(k)
+                            break
+                else:
+                    self.useful_history_idx.append(curr_idx)
+                    self.useless_pragma.append([])
+            return
         try:
             reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
                 prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)

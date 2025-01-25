@@ -19,6 +19,7 @@ for file in os.listdir(BASELINE_DIR):
         c_code = open(f'{DATA_DIR}/{kernel}.c', 'r').read()
         print(f'Running {file}')
         idx += 1
+        print(f"Running {kernel} {shot} {know} {arbitrator} at {idx}")
         compile_args.append((BASELINE_WORK_DIR, c_code, design, idx))
 with ThreadPoolExecutor(max_workers=15) as executor:   
     merlin_results = list(executor.map(lambda args: eval_design(*args), compile_args))
