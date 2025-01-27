@@ -24,7 +24,8 @@ def llm_dse(c_code):
             reflection = explorer.self_reflection(prev_design, design, prev_hls_results, prev_hls_warnings, curr_hls_results, curr_hls_warnings, explorer.get_index(prev_design), i_steps)
             reflection = "useful" if i_steps == 0 else reflection
             pragma_warnings = explorer.analyze_warnings(curr_hls_warnings)
-            explorer.record_history(i_iter, i_steps, time.time()-ticks[0], design, curr_hls_results, pragma_warnings, reflection)
+            elapsed_time_str = format_time(time.time()-ticks[0])
+            explorer.record_history(i_iter, i_steps, elapsed_time_str, design, curr_hls_results, pragma_warnings, reflection)
             i_steps += 1
         ticks.append(time.time())
         open(TIME_LOGFILE, 'a').write(f'Iteration {len(ticks)-1}, Total runtime: {ticks[-1] - ticks[0]}, Iteration runtime: {ticks[-1] - ticks[-2]}\n')

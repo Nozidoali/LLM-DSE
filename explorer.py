@@ -11,7 +11,7 @@ class Explorer():
         self.pragma_names: List[str] = list(pragma_names)[:]
         self.optimizer_reflections: Dict[str, List[str]] = {p: [] for p in pragma_names}
         
-    def record_history(self, i_iter: int, i_step: int, t_iter: int, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
+    def record_history(self, i_iter: int, i_step: int, t_iter: str, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
         self.exploration_history.append({
             "i_step": i_step, "i_iter": i_iter, "time": t_iter, "design": design, 
             "result": hls_results, "warnings": pragma_warnings, 
@@ -82,11 +82,11 @@ class Explorer():
         try:
             prompt = compile_best_design_prompt(self.c_code, candidates)
             response = get_openai_response(prompt, MODEL)
-            return list(map(lambda x: candidates[x][0], retrieve_indices_from_response(response)))
+            return list(map(lambda x: candidates[x]["i_step"], retrieve_indices_from_response(response)))
         except Exception as e:
             if PRINT_WARNINGS: 
-                print(f"WARNING: Failed to retrieve best designs for {pragma_name}, error: {e}")
                 traceback.print_exc()
+                print(f"WARNING: Failed to retrieve best designs for {pragma_name}, error: {e}, candidates: {candidates}")
             return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
     
     def propose_update(self, from_idx: int, pragma_name: str) -> dict:
@@ -105,8 +105,8 @@ class Explorer():
             return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt, MODEL))]
         except Exception as e:
             if PRINT_WARNINGS: 
-                print(f"WARNING: Failed to retrieve updates for {pragma_name}, error: {e}")
                 traceback.print_exc()
+                print(f"WARNING: Failed to retrieve updates for {pragma_name}, error: {e}, best design: {best_design}, results: {hls_results}")
             return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
     
     def select_best_update(self, pragma_updates: List[Tuple[dict, str, str]]) -> Tuple[dict, str, str]:
