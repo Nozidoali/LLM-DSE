@@ -45,6 +45,10 @@ def format_results(results: dict) -> str:
 def format_list(l: list) -> str:
     return ", ".join([f"\"{x}\"" for x in l])
 
+def format_time(elapsed) -> str:
+    minutes, seconds = divmod(int(elapsed), 60)
+    return f"{minutes:02d}min {seconds:02d}sec"
+
 def format_example(design: dict, results: dict, warnings: List[str], reflection=None) -> str:
     return ", ".join(filter(None, [
         f"**{reflection}**" if reflection else "",
@@ -95,8 +99,7 @@ def run_merlin_compile(make_dir: str) -> Tuple[Dict[str, str], List[str]]:
     if os.path.exists(os.path.join(make_dir, f"{KERNEL_NAME}.mco")): subprocess.run("rm -f " + os.path.join(make_dir, f"{KERNEL_NAME}.mco"), shell=True)
     subprocess.run(f"rm -f {os.path.join(make_dir, '*.zip')}", shell=True)
     time.sleep(10) # wait for the file to be written
-    minutes, seconds = divmod(int(elapsed), 60)
-    return {"compilation time": f"{minutes:02d}min {seconds:02d}sec", **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
+    return {"compilation time": format_time(elapsed), **parse_merlin_rpt(merlin_rpt_file)}, parse_merlin_log(merlin_log_file)
 
 def _rand_result(rand=False):
     if not rand: return "0 (0%)"
@@ -197,8 +200,8 @@ def compile_best_design_prompt(c_code: str, candidates: list) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(candidates))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
-        *[f" {i}: {format_example(design, hls_results, [], reflection)} The remaining search space is {info['remaining space']}."
-          for i, (_, design, hls_results, _, reflection, info) in enumerate(candidates)],
+        *[f"{i}: " + format_example(x["design"], x["result"], [], x["reflection"]) + "The remaining search space is: " + str(x["remaining space"])
+          for i, x in enumerate(candidates)],
         *KNOWLEDGE_DATABASE['best_design'],
         f"Note that you are doing a design space exploration, and you must find the design that can be further optimized.",
         REGULATE_OUTPUT("index list", len(candidates), n_best_designs),
@@ -222,12 +225,13 @@ def compile_general_reflection_prompt(c_code: str, prev_design: dict, curr_desig
     
 def compile_pruning_reflection_prompt(prev_design: dict, curr_design: dict, prev_hls_results: Dict[str, str], curr_hls_results: Dict[str, str]) -> str:
     return "\n".join([
-        f"You task is to decide for the DSE, whether a new design is useful or useless to be updated in the database."
+        f"You task is to decide whether a new design is useful or useless to be updated in the exploration history of a design space exploration process.", 
+        *KNOWLEDGE_DATABASE['objective'],        
         f"The previous design is {format_design(prev_design)} with the results {format_results(prev_hls_results)}",
-        f"The current design is {format_design(curr_design)} with the results {format_results(curr_hls_results)}",
+        f"The new design is {format_design(curr_design)} with the results {format_results(curr_hls_results)}",
         *KNOWLEDGE_DATABASE['pruning_reflection'],
         f"Output a comment no longer than {SELF_REFLECTION_WORD_LIMIT} words for the current design.",
-        f"The design is"
+        f"The design is: "
     ])
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:

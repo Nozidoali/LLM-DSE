@@ -11,17 +11,21 @@ class Explorer():
         self.pragma_names: List[str] = list(pragma_names)[:]
         self.optimizer_reflections: Dict[str, List[str]] = {p: [] for p in pragma_names}
         
-    def record_history(self, i_step: int, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
-        self.exploration_history.append([i_step, design, hls_results, pragma_warnings, reflection])
-        self.datas.append({**hls_results, **design, "step": i_step})
+    def record_history(self, i_iter: int, i_step: int, t_iter: int, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
+        self.exploration_history.append({
+            "i_step": i_step, "i_iter": i_iter, "time": t_iter, "design": design, 
+            "result": hls_results, "warnings": pragma_warnings, 
+            "reflection": reflection
+        })
+        self.datas.append({**hls_results, **design, "step": i_step, "iteration": i_iter, "time": t_iter})
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)        
     
     def load_history(self, design: dict, pragma_name: str) -> Dict[str, str]:
-        return {x[1][pragma_name]: format_results(x[2]) for x in self.exploration_history if designs_are_adjacent(x[1], design) and x[1][pragma_name] != design[pragma_name]}
+        return {x["design"][pragma_name]: format_results(x["result"]) for x in self.exploration_history if designs_are_adjacent(x["design"], design) and x["design"][pragma_name] != design[pragma_name]}
     
     def load_results(self, design: dict) -> Dict[str, str]:
         for x in self.exploration_history:
-            if designs_are_equal(x[1], design): return x[2], x[3]
+            if designs_are_equal(x["design"], design): return x["result"], x["warnings"]
         return None, None
     
     def get_info(self, design: dict) -> int:
@@ -32,7 +36,7 @@ class Explorer():
         }
         
     def get_index(self, design: dict) -> int:
-       index = next((x[0] for x in self.exploration_history if x[1] == design), None)
+       index = next((x["i_step"] for x in self.exploration_history if x["design"] == design), None)
        return index
         
     def analyze_warnings(self, warnings: List[str]) -> Dict[str, List[str]]:
@@ -46,59 +50,50 @@ class Explorer():
             except Exception as e:
                 pass
         return pragma_warnings
-    
-    def filter_history(self, history, get_result: callable):
-        seen = set()
-        unique_history = []
-        for x in history:
-            hls_result = get_result(x)
-            if is_timeout(hls_result): 
-                unique_history.append(x)
-                continue
-            identifier = tuple(hls_result[k] for k in RESULT_KEYS)
-            if identifier not in seen:
-                seen.add(identifier)
-                unique_history.append(x)
-        return unique_history
 
     def select_best_designs(self, pragma_name: str) -> List[int]:
         pragma_type = get_pragma_type(pragma_name)
-        useful_history = sorted(self.exploration_history, key=lambda x: get_perf(x[2]))
+        useful_history = sorted(self.exploration_history, key=lambda x: get_perf(x["result"]))
         if AUTO_REFLECTION:
             useful_history = [self.exploration_history[i] for i in self.useful_history_idx]
-            useful_history = sorted(useful_history, key=lambda x: get_perf(x[2]))
-        best_design = useful_history[0][1]
+            useful_history = sorted(useful_history, key=lambda x: get_perf(x["result"]))
+        best_design = useful_history[0]["design"]
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
             best_design_info = self.get_info(best_design)
             if best_design_info['remaining space'] != 0:
-                candidates.append(useful_history[0] + [self.get_info(best_design)])
-            for step, design, hls_results, pragma_warnings, reflection in useful_history[1:]:
+                candidates.append({**useful_history[0], **self.get_info(best_design)})
+            for x in useful_history[1:]:
+                design, hls_results = x["design"], x["result"]
                 if is_timeout(hls_results) or not is_valid(hls_results): continue
                 design_info = self.get_info(design)
                 if design_info['remaining space'] != 0:
-                    candidates.append((step, design, hls_results, pragma_warnings, reflection, self.get_info(design)))
+                    candidates.append({**x, **design_info})
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
-            for step, design, hls_results, pragma_warnings, reflection in useful_history:
-                if is_timeout(hls_results) or not is_valid(hls_results):
-                    candidates.append((step, design, hls_results, pragma_warnings, reflection, self.get_info(design)))
+            for x in useful_history:
+
+                if is_timeout(x["result"]) or not is_valid(x["result"]):
+                    candidates.append({**x, **self.get_info(x["design"])})
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
             random.shuffle(candidates)
-        if len(candidates) < NUM_BEST_DESIGNS: return list(map(lambda x: x[0], candidates))
-        if AUTO_BEST_DESIGN: return list(map(lambda x: x[0], candidates[:NUM_BEST_DESIGNS]))
+        if len(candidates) < NUM_BEST_DESIGNS: return list(map(lambda x: x["i_step"], candidates))
+        if AUTO_BEST_DESIGN: return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
         try:
             prompt = compile_best_design_prompt(self.c_code, candidates)
             response = get_openai_response(prompt, MODEL)
             return list(map(lambda x: candidates[x][0], retrieve_indices_from_response(response)))
         except Exception as e:
-            return list(map(lambda x: x[0], candidates[:NUM_BEST_DESIGNS]))
+            if PRINT_WARNINGS: 
+                print(f"WARNING: Failed to retrieve best designs for {pragma_name}, error: {e}")
+                traceback.print_exc()
+            return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
     
     def propose_update(self, from_idx: int, pragma_name: str) -> dict:
         if AUTO_REFLECTION:
             if pragma_name in self.useless_pragma[self.useful_history_idx.index(from_idx)]: return []
         pragma_type = get_pragma_type(pragma_name)
-        _, best_design, hls_results, warnings, *_ = self.exploration_history[from_idx]
+        _, best_design, hls_results, warnings = map(lambda x:self.exploration_history[from_idx][x], ["i_step", "design", "result", "warnings"])
         explored_values = self.load_history(best_design, pragma_name)
         all_options = [str(v) for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
@@ -109,6 +104,9 @@ class Explorer():
             update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, all_options, pragma_type, warnings.get(pragma_name, []), explored_values, self.optimizer_reflections[pragma_name])
             return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt, MODEL))]
         except Exception as e:
+            if PRINT_WARNINGS: 
+                print(f"WARNING: Failed to retrieve updates for {pragma_name}, error: {e}")
+                traceback.print_exc()
             return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
     
     def select_best_update(self, pragma_updates: List[Tuple[dict, str, str]]) -> Tuple[dict, str, str]:
@@ -118,6 +116,9 @@ class Explorer():
             prompt = compile_arbitrator_prompt(self.c_code, pragma_updates)
             return [pragma_updates[_idx] for _idx in retrieve_indices_from_response(get_openai_response(prompt, MODEL))]
         except Exception as e:
+            if PRINT_WARNINGS: 
+                print(f"WARNING: Failed to retrieve best update, error: {e}")
+                traceback.print_exc()
             return random.sample(pragma_updates, NUM_CHOSENS)
 
     def explore(self):
@@ -153,14 +154,16 @@ class Explorer():
             reflection_prompt = compile_pruning_reflection_prompt(prev_design, curr_design, 
                 prev_hls_results, curr_hls_results)
             return get_openai_response(reflection_prompt, MODEL, temperature=0.2)
-            reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
-                prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
-            for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
-                print(f"Reflections for {pragma_name}:\n\t" + "\n\t".join(reflections))
-                if pragma_name in self.optimizer_reflections:
-                    self.optimizer_reflections[pragma_name].extend(reflections)
-                    if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
-                        self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
+            # reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
+            #     prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
+            # for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
+            #     print(f"Reflections for {pragma_name}:\n\t" + "\n\t".join(reflections))
+            #     if pragma_name in self.optimizer_reflections:
+            #         self.optimizer_reflections[pragma_name].extend(reflections)
+            #         if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
+            #             self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
         except Exception as e:
-            traceback.print_exc()
+            if PRINT_WARNINGS: 
+                print(f"WARNING: Failed to retrieve reflections, error: {e}")
+                traceback.print_exc()
             return

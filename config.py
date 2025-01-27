@@ -31,7 +31,7 @@ PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
 DATABASE_FILE: str = os.path.join(DATABASE_FOLDER, f"{BENCHMARK}.csv")
 COMPILE_TIMEOUT_MINUTES: int = 60
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
-ENABLE_DATABASE_LOOKUP: bool = False # find results from database, this may skip some useful warnings
+ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip some useful warnings
 DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
 
 # Debug mode
@@ -42,6 +42,8 @@ AUTO_OPTIMIZER: bool = False # Automatically optimize the design
 AUTO_REFLECTION: bool = False # Automatically generate reflection
 AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
+
+PRINT_WARNINGS: bool = True
 
 if not os.path.exists(WORK_DIR): os.makedirs(WORK_DIR)
 
@@ -80,9 +82,9 @@ GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 DEEPSEEK_MODEL = "deepseek-chat"
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 
-MODEL = DEEPSEEK_MODEL
+MODEL = GPT_MODEL
 
-NUM_BEST_DESIGN_CANIDATES = 10
+NUM_BEST_DESIGN_CANIDATES = 20
 SELF_REFLECTION_WORD_LIMIT = 1
 SELF_REFLECTION_LIMIT = 1
 SELF_REFLECTION_LENGTH = 10
