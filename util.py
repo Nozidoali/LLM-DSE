@@ -238,8 +238,7 @@ def parse_merlin_rpt(merlin_rpt: str) -> Dict[str, str]:
         lines = open(merlin_rpt, "r").readlines()
         target_line_idx = [i for i, l in enumerate(lines) if "Estimated Frequency" in l]
         util_values = lines[target_line_idx[0]+4].split("|")[2:]
-        util_keys = ['cycles', 'lut utilization', 'FF utilization', 'BRAM utilization' ,'DSP utilization' ,'URAM utilization']
-        return {util_keys[i]: util_values[i] for i in range(6)}
+        return {RESULT_KEYS[i]: util_values[i] for i in range(len(RESULT_KEYS))}
     except:
         return {}
 

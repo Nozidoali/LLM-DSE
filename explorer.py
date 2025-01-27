@@ -46,6 +46,9 @@ class Explorer():
         seen = set()
         unique_history = []
         for x in history:
+            if not ENABLE_ALICE_FILTER:
+                unique_history.append(x)
+                continue
             hls_result = get_result(x)
             if is_timeout(hls_result): 
                 unique_history.append(x)

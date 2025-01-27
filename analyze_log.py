@@ -1,7 +1,7 @@
 import argparse
 import re, json
 from typing import List
-import pydot
+import networkx as nx
 import pandas as pd
 
 parser = argparse.ArgumentParser(description='Analyze log file')
@@ -91,32 +91,29 @@ class Analyzer:
         self.logs = parse_prompt_response(open(log_file).read())
         self.times = parse_time_log(time_log)
         self.results = pd.read_csv(csv_file)
-        self.node_labels = set()
         self.pragma_names = [col for col in self.results.columns if pragma_pattern.search(col)]
+        self.design_to_perf = {}
+        self.node_labels = set()
 
-    def serialize_design(self, design: dict, keys: List[str]):
-        return '\n'.join([f"{key}={design[key]}" for key in keys])
+    def serialize_design(self, design: dict):
+        return '\n'.join([f"{key.strip()}={str(design[key]).strip()}" for key in self.pragma_names])
 
-    def result_at(self, step: int):
-        return self.results.iloc[step]
-
-    def design_at(self, step: int):
-        return {k: self.result_at(step)[k] for k in self.pragma_names}
+    def design_of(self, data: dict):
+        return {k: str(data[k]) if str(data[k]) != "nan" else "" for k in self.pragma_names}
 
     def simulate(self, timeout: int = 8 * 3600):
-        curr_step: int = 0
-        self.graph = pydot.Dot(graph_type='digraph')
+        self.graph = nx.DiGraph()
         
         max_iter = 0
         for iter, time_info in self.times.items():
             if time_info["total_runtime"] > timeout: break
             max_iter = iter
         
-        for row in self.results.iterrows():
-            design = self.design_at(curr_step)
-            self.graph.add_node(pydot.Node(self.serialize_design(design, self.pragma_names), shape='box'))
-            self.node_labels.add(self.serialize_design(design, self.pragma_names))
-            curr_step += 1
+        for i, row in self.results.iterrows():
+            design = self.design_of(row.to_dict())
+            performance = get_perf(row.to_dict())
+            self.design_to_perf[self.serialize_design(design)] = performance
+        print(self.design_to_perf)
             
         max_step, i_iter = 0, 0
         for agent_type, agent_args in self.logs:
@@ -127,17 +124,35 @@ class Analyzer:
                     max_step += 1
                     option = agent_args["options"][idx]
                     pragma_name, from_val, to_val, base_design = option["pragma_name"], option["from_val"], option["to_val"], to_dict(option["design"])
-                    old_design = {**base_design, pragma_name: str(to_val)}
-                    new_design = {**base_design, pragma_name: str(from_val)}
+                    new_design = {**base_design, pragma_name: str(to_val)}
+                    old_design = {**base_design, pragma_name: str(from_val)}
                     
-                    self.graph.add_edge(pydot.Edge(self.serialize_design(old_design, self.pragma_names), self.serialize_design(new_design, self.pragma_names)))
+                    new_str, old_str = self.serialize_design(new_design), self.serialize_design(old_design)
+                    
+                    for _str in [new_str, old_str]:
+                        if _str not in self.node_labels:
+                            label: str = self.design_to_perf[_str] if _str in self.design_to_perf else _str
+                            self.graph.add_node(new_str, shape='box', label=label)
+                            self.node_labels.add(_str)
+                        
+                    self.graph.add_edge(
+                        self.serialize_design(old_design),
+                        self.serialize_design(new_design),
+                        label=f"{pragma_name}:\n{from_val} -> {to_val}"
+                    )
     
-        best_perf = min(get_perf(self.result_at(i).to_dict()) for i in range(max_step))
+        best_perf = min(get_perf(self.results.iloc[i].to_dict()) for i in range(max_step))
         print(f"{args.benchmark},{best_perf}")
     
     def to_dot(self, filename: str):
-        self.graph.write_dot(filename)
-    
+        pos = nx.spring_layout(self.graph)
+
+        # Add positions to the graph as node attributes
+        for node, coordinates in pos.items():
+            self.graph.nodes[node]['pos'] = f"{coordinates[0]},{coordinates[1]}"
+
+        nx.drawing.nx_pydot.write_dot(self.graph, filename)
+        
 if __name__ == "__main__":
     analyzer = Analyzer(args.benchmark, args.folder)
     analyzer.simulate()
