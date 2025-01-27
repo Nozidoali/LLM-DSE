@@ -31,7 +31,7 @@ PICKLE_FILE: str = os.path.join(args.folder, f"{BENCHMARK}.pickle")
 DATABASE_FILE: str = os.path.join(DATABASE_FOLDER, f"{BENCHMARK}.csv")
 COMPILE_TIMEOUT_MINUTES: int = 60
 COMPILE_TIMEOUT: int = COMPILE_TIMEOUT_MINUTES * 60
-ENABLE_DATABASE_LOOKUP: bool = True # find results from database, this may skip some useful warnings
+ENABLE_DATABASE_LOOKUP: bool = False # find results from database, this may skip some useful warnings
 DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FILE)
 
 # Debug mode
