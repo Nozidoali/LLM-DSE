@@ -37,9 +37,9 @@ DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FIL
 # Debug mode
 DEBUG_MERLIN: bool = False # DONT CHANGE THIS UNLESS YOU ARE DEBUGGING MERLIN
 DEBUG_OPENAI: bool = False # If we use human response to debug
-AUTO_BEST_DESIGN: bool = True # Replace OpenAI with hueristic
+AUTO_BEST_DESIGN: bool = False # Replace OpenAI with hueristic
 AUTO_OPTIMIZER: bool = False # Automatically optimize the design
-AUTO_REFLECTION: bool = True # Automatically generate reflection
+AUTO_REFLECTION: bool = False # Automatically generate reflection
 AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
 AUTO_WARNING_ANALYSIS: bool = True # Automatically analyze the warnings
 
@@ -76,8 +76,14 @@ RESULT_KEYS = ["cycles", "lut utilization", "FF utilization", "BRAM utilization"
 
 GPT_MODEL = "gpt-4o" # "gpt-4o-mini" or "gpt-4o"
 
+# DEEPSEEK 
+DEEPSEEK_MODEL = "deepseek-chat"
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+MODEL = DEEPSEEK_MODEL
+
 NUM_BEST_DESIGN_CANIDATES = 10
-SELF_REFLECTION_WORD_LIMIT = 30
+SELF_REFLECTION_WORD_LIMIT = 1
 SELF_REFLECTION_LIMIT = 1
 SELF_REFLECTION_LENGTH = 10
 
@@ -119,6 +125,7 @@ KNOWLEDGE_DATABASE = {
 		f"	(3) Note that the resource utilization is calculated by the max of LUT, FF, BRAM, DSP, and URAM utilization.",
 		f"	(4) When the performances are similar, you should choose the design with more room for improvement.",
 		f"	(5) Besides all the metrics above, you should priority the design that has more remaining search spaces left).",
+		f"	(6) Don't choose useless design in the database."
 	],
 	'parallel': [
 		f"Here is some knowledge about the __PARA__LX pragma:",
@@ -157,6 +164,12 @@ KNOWLEDGE_DATABASE = {
 		f"  (2) What was the difference in the two sets of warnings? Did the change in pragma value affect the warnings?",
 		f"  (3) What was the major differences in the two results? How did the change in pragma value affect the results?", 
 		f"  (4) How would you explain the change in the performance, resource utilization and compilation time given the code structure?",
+	],
+	'pruning_reflection': [
+		f"For a DSE problem:",
+		f"	(1) Exact same cycles and resource utilization mean this design is useless.",	
+  		f"	(2) Significant changes in the cycles, resource utilization and compilation time no matter improvement or worsening mean this design is useful.",
+		f"	(3) Design that has compilation timeout could also be considered useful."
 	],
 	"warning_analysis": [
         f"For example, if you have the following warning:",

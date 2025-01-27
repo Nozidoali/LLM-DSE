@@ -3,6 +3,7 @@ import json
 import re
 import subprocess
 import openai
+from openai import OpenAI
 import traceback
 import pickle
 from typing import List, Dict, Union, Optional, Tuple
@@ -44,12 +45,13 @@ def format_results(results: dict) -> str:
 def format_list(l: list) -> str:
     return ", ".join([f"\"{x}\"" for x in l])
 
-def format_example(design: dict, results: dict, warnings: List[str]) -> str:
-    return ", ".join([
+def format_example(design: dict, results: dict, warnings: List[str], reflection=None) -> str:
+    return ", ".join(filter(None, [
+        f"**{reflection}**" if reflection else "",
         f"When {format_design(design)}",
         f"the result is: {format_results(results)}",
-        (f"with warnings: {format_list(warnings)}" if warnings else "")
-    ])
+        (f"with warnings: {format_list(warnings)}" if warnings else ""),
+    ]))
     
 def extract_dict(design_str: str) -> Dict[str, str]:
     return {k.strip(): v.strip() for k, v in re.findall(r'(\w+(?: \w+)*)\s*=\s*([^\s,]+)', design_str)}
@@ -123,18 +125,43 @@ def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tupl
     return merlin_results, merlin_log
 
 def get_openai_response(prompt, model=GPT_MODEL, temperature=0.7) -> str:
-    response = openai.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": "You are an expert in design HLS codes."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=10000,  # Set the largest token numbers
-        temperature=temperature,  # Control the randomness of the generative result
-    ).choices[0].message.content if not DEBUG_OPENAI else input(f"{prompt}\n\033[33mENTER response: >\033[0m\n")
-    open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
-    return(response)
-
+    if model == GPT_MODEL:
+        failed = True
+        while failed:
+            try:
+                response = openai.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert in design HLS codes."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=10000,  # Set the largest token numbers
+                    temperature=temperature,  # Control the randomness of the generative result
+                ).choices[0].message.content if not DEBUG_OPENAI else input(f"{prompt}\n\033[33mENTER response: >\033[0m\n")
+                failed = False
+            except:
+                failed = True
+                time.sleep(2)
+        open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
+        return(response)
+    elif model == DEEPSEEK_MODEL:
+        client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "You are an expert in design HLS codes."},
+                {"role": "user", "content": prompt},
+            ],
+            stream=False,
+            # response_format={
+            #     'type': 'json_object'
+            # },
+            max_tokens=8192,  # Set the largest token numbers
+            temperature=1.3
+        ).choices[0].message.content
+        open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
+        return(response)
+        
 def handle_response_exceptions(func):
     def wrapper(response: str):
         try:
@@ -170,14 +197,14 @@ def compile_best_design_prompt(c_code: str, candidates: list) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(candidates))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
-        *[f" {i}: {format_example(design, hls_results, [])} with {info['remaining space']} remaining search space."
-          for i, (_, design, hls_results, _, info) in enumerate(candidates)],
+        *[f" {i}: {format_example(design, hls_results, [], reflection)} The remaining search space is {info['remaining space']}."
+          for i, (_, design, hls_results, _, reflection, info) in enumerate(candidates)],
         *KNOWLEDGE_DATABASE['best_design'],
         f"Note that you are doing a design space exploration, and you must find the design that can be further optimized.",
         REGULATE_OUTPUT("index list", len(candidates), n_best_designs),
     ])
     
-def compile_reflection_prompt(c_code: str, prev_design: dict, curr_design: dict, prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]], curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]], pragma_names: List[str]) -> str:
+def compile_general_reflection_prompt(c_code: str, prev_design: dict, curr_design: dict, prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]], curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]], pragma_names: List[str]) -> str:
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to reflect on the two following designs.", 
         format_example(prev_design, prev_hls_results, prev_pragma_warnings),
@@ -191,6 +218,16 @@ def compile_reflection_prompt(c_code: str, prev_design: dict, curr_design: dict,
         f"You don't need to cover all the pragmas, only the ones that has REALLY constructive suggestion.", 
         f"You could generate at most {SELF_REFLECTION_LIMIT} reflections for each pragma, and each reflection should be a sentence with at most {SELF_REFLECTION_WORD_LIMIT} words.",
         f"Never output the reasoning and you must make sure the JSON string is valid.",
+    ])
+    
+def compile_pruning_reflection_prompt(prev_design: dict, curr_design: dict, prev_hls_results: Dict[str, str], curr_hls_results: Dict[str, str]) -> str:
+    return "\n".join([
+        f"You task is to decide for the DSE, whether a new design is useful or useless to be updated in the database."
+        f"The previous design is {format_design(prev_design)} with the results {format_results(prev_hls_results)}",
+        f"The current design is {format_design(curr_design)} with the results {format_results(curr_hls_results)}",
+        *KNOWLEDGE_DATABASE['pruning_reflection'],
+        f"Output a comment no longer than {SELF_REFLECTION_WORD_LIMIT} words for the current design.",
+        f"The design is"
     ])
 
 def compile_warning_analysis_prompt(warnings: List[str], pragma_names: List[str]) -> str:

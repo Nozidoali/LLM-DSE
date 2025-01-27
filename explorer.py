@@ -11,8 +11,8 @@ class Explorer():
         self.pragma_names: List[str] = list(pragma_names)[:]
         self.optimizer_reflections: Dict[str, List[str]] = {p: [] for p in pragma_names}
         
-    def record_history(self, i_step: int, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]]):
-        self.exploration_history.append([i_step, design, hls_results, pragma_warnings])
+    def record_history(self, i_step: int, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
+        self.exploration_history.append([i_step, design, hls_results, pragma_warnings, reflection])
         self.datas.append({**hls_results, **design, "step": i_step})
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)        
     
@@ -63,44 +63,43 @@ class Explorer():
 
     def select_best_designs(self, pragma_name: str) -> List[int]:
         pragma_type = get_pragma_type(pragma_name)
-        # history = sorted(self.exploration_history, key=lambda x: get_perf(x[2]))
-        useful_history = [self.exploration_history[i] for i in self.useful_history_idx]
-        useful_history = sorted(useful_history, key=lambda x: get_perf(x[2]))
+        useful_history = sorted(self.exploration_history, key=lambda x: get_perf(x[2]))
+        if AUTO_REFLECTION:
+            useful_history = [self.exploration_history[i] for i in self.useful_history_idx]
+            useful_history = sorted(useful_history, key=lambda x: get_perf(x[2]))
         best_design = useful_history[0][1]
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
             best_design_info = self.get_info(best_design)
             if best_design_info['remaining space'] != 0:
                 candidates.append(useful_history[0] + [self.get_info(best_design)])
-            for step, design, hls_results, pragma_warnings in useful_history[1:]:
+            for step, design, hls_results, pragma_warnings, reflection in useful_history[1:]:
                 if is_timeout(hls_results) or not is_valid(hls_results): continue
                 design_info = self.get_info(design)
                 if design_info['remaining space'] != 0:
-                    candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
+                    candidates.append((step, design, hls_results, pragma_warnings, reflection, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
-            for step, design, hls_results, pragma_warnings in useful_history:
+            for step, design, hls_results, pragma_warnings, reflection in useful_history:
                 if is_timeout(hls_results) or not is_valid(hls_results):
-                    candidates.append((step, design, hls_results, pragma_warnings, self.get_info(design)))
+                    candidates.append((step, design, hls_results, pragma_warnings, reflection, self.get_info(design)))
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
             random.shuffle(candidates)
         if len(candidates) < NUM_BEST_DESIGNS: return list(map(lambda x: x[0], candidates))
         if AUTO_BEST_DESIGN: return list(map(lambda x: x[0], candidates[:NUM_BEST_DESIGNS]))
         try:
             prompt = compile_best_design_prompt(self.c_code, candidates)
-            response = get_openai_response(prompt)
+            response = get_openai_response(prompt, MODEL)
             return list(map(lambda x: candidates[x][0], retrieve_indices_from_response(response)))
         except Exception as e:
             return list(map(lambda x: x[0], candidates[:NUM_BEST_DESIGNS]))
     
     def propose_update(self, from_idx: int, pragma_name: str) -> dict:
-        if pragma_name in self.useless_pragma[self.useful_history_idx.index(from_idx)]: return []
+        if AUTO_REFLECTION:
+            if pragma_name in self.useless_pragma[self.useful_history_idx.index(from_idx)]: return []
         pragma_type = get_pragma_type(pragma_name)
-        _, best_design, hls_results, warnings = self.exploration_history[from_idx]
+        _, best_design, hls_results, warnings, *_ = self.exploration_history[from_idx]
         explored_values = self.load_history(best_design, pragma_name)
-        # filtered_explored_values = self.filter_history(list(explored_values.values()), extract_dict)
-        # explored_hls_results = list(explored_values.values())
-        # if len(explored_hls_results) != len(filtered_explored_values): return []
         all_options = [str(v) for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
         num_updates = NUM_OPTIMIZATIONS if pragma_type != "pipeline" else 1
@@ -108,7 +107,7 @@ class Explorer():
         if AUTO_OPTIMIZER: return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
         try:
             update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, all_options, pragma_type, warnings.get(pragma_name, []), explored_values, self.optimizer_reflections[pragma_name])
-            return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt))]
+            return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt, MODEL))]
         except Exception as e:
             return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
     
@@ -117,7 +116,7 @@ class Explorer():
         if AUTO_ARBITRATOR: return random.sample(pragma_updates, NUM_CHOSENS)
         try:
             prompt = compile_arbitrator_prompt(self.c_code, pragma_updates)
-            return [pragma_updates[_idx] for _idx in retrieve_indices_from_response(get_openai_response(prompt))]
+            return [pragma_updates[_idx] for _idx in retrieve_indices_from_response(get_openai_response(prompt, MODEL))]
         except Exception as e:
             return random.sample(pragma_updates, NUM_CHOSENS)
 
@@ -151,6 +150,9 @@ class Explorer():
                     self.useless_pragma.append([])
             return
         try:
+            reflection_prompt = compile_pruning_reflection_prompt(prev_design, curr_design, 
+                prev_hls_results, curr_hls_results)
+            return get_openai_response(reflection_prompt, MODEL, temperature=0.2)
             reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
                 prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
             for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
@@ -160,4 +162,5 @@ class Explorer():
                     if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
                         self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
         except Exception as e:
+            traceback.print_exc()
             return
