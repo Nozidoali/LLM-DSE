@@ -2,15 +2,20 @@
 folder_path=./data/lad25
 result_path=./exp_opt_arb_besa_ref_3
 
+if [ -d $result_path ]; then
+    echo "Result path $result_path already exists. Please remove it first."
+    exit 1
+fi
+
 if [ ! -d "$result_path" ]; then
     mkdir -p "$result_path"
 fi
 
-mode="run"
-# mode="harvest"
+# mode="run"
+mode="harvest"
 
 work_dir=/scratch/hanyu
-date_str=20250127_135701  # for harvest
+date_str=20250128_010029  # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)
@@ -25,8 +30,8 @@ while IFS= read -r c_file; do
             echo "work_${base_name}_${date_str} exists in ${work_dir}"
             cp ${work_dir}/work_${base_name}_${date_str}/results.csv ./${result_path}/${base_name}.csv
             cp ${work_dir}/work_${base_name}_${date_str}/openai.log ./${result_path}/${base_name}.txt
-            cp ${work_dir}/work_${base_name}_${date_str}/time.log ./${result_path}/${base_name}.log
             cp ${work_dir}/work_${base_name}_${date_str}/config.json ./${result_path}/${base_name}.json
+            # cp ${work_dir}/work_${base_name}_${date_str}/time.log ./${result_path}/${base_name}.log
         else
             echo "work_${base_name}_${date_str} does not exist in ${work_dir}"
         fi

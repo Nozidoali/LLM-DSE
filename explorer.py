@@ -63,9 +63,12 @@ class Explorer():
     def select_best_designs(self, pragma_name: str) -> List[int]:
         pragma_type = get_pragma_type(pragma_name)
         useful_history = sorted(self.exploration_history, key=lambda x: get_perf(x["result"]))
-        if AUTO_REFLECTION:
+        if AUTO_REFLECTION == "HEU":
             useful_history = [self.exploration_history[i] for i in self.useful_history_idx]
             useful_history = sorted(useful_history, key=lambda x: get_perf(x["result"]))
+        if AUTO_BEST_DESIGN == "BASE":
+            for x in useful_history:
+                if not is_timeout(x["result"]) and is_valid(x["result"]): return [x["i_step"]]
         best_design = useful_history[0]["design"]
         candidates = []
         if pragma_type in ["parallel", "pipeline"]:
@@ -86,7 +89,7 @@ class Explorer():
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
             random.shuffle(candidates)
         if len(candidates) <= NUM_BEST_DESIGNS: return list(map(lambda x: x["i_step"], candidates))
-        if AUTO_BEST_DESIGN: return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
+        if AUTO_BEST_DESIGN == "HEU": return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
         try:
             prompt = compile_best_design_prompt(self.c_code, candidates)
             response = get_openai_response(prompt, f"Best Design Selector for {pragma_name} at Iteration {self.i_iter}", model=MODEL)
@@ -98,7 +101,7 @@ class Explorer():
             return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
     
     def propose_update(self, from_idx: int, pragma_name: str) -> dict:
-        if AUTO_REFLECTION:
+        if AUTO_REFLECTION == "HEU":
             if pragma_name in self.useless_pragma[self.useful_history_idx.index(from_idx)]: return []
         pragma_type = get_pragma_type(pragma_name)
         _, best_design, hls_results, warnings = map(lambda x:self.exploration_history[from_idx][x], ["i_step", "design", "result", "warnings"])
@@ -140,9 +143,10 @@ class Explorer():
             prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]],
             curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]],
             prev_idx: int, curr_idx: int):
+        if AUTO_REFLECTION == "BASE": return
         if self.i_steps <= 1: return "useful" # first step
         if not prev_hls_results or not curr_hls_results: return
-        if AUTO_REFLECTION: 
+        if AUTO_REFLECTION == "HEU": 
             if is_timeout(curr_hls_results):
                 if curr_hls_results["compilation time"].split("min")[0].strip() == str(COMPILE_TIMEOUT_MINUTES): 
                     self.useful_history_idx.append(curr_idx)
