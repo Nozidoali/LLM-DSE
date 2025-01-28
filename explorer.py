@@ -11,13 +11,22 @@ class Explorer():
         self.pragma_names: List[str] = list(pragma_names)[:]
         self.optimizer_reflections: Dict[str, List[str]] = {p: [] for p in pragma_names}
         
-    def record_history(self, i_iter: int, i_step: int, t_iter: str, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
+        self.i_steps, self.i_iter = 0, 0
+        self.ticks = [time.time()]
+    
+    def proceed(self):
+        self.i_iter += 1
+        return self.i_iter < MAX_ITER and int(time.time() - self.ticks[0]) < EXPLORER_TIMEOUT
+        
+    def record_history(self, design: dict, hls_results: Dict[str, str], pragma_warnings: Dict[str, List[str]], reflection: str):
+        t_iter = format_time(time.time()-self.ticks[0])
         self.exploration_history.append({
-            "i_step": i_step, "i_iter": i_iter, "time": t_iter, "design": design, 
+            "i_step": self.i_steps, "i_iter": self.i_iter, "time": t_iter, "design": design, 
             "result": hls_results, "warnings": pragma_warnings, 
             "reflection": reflection
         })
-        self.datas.append({**hls_results, **design, "step": i_step, "iteration": i_iter, "time": t_iter})
+        self.datas.append({**hls_results, **design, "step": self.i_steps, "iteration": self.i_iter, "time": t_iter})
+        self.i_steps += 1 # should be consistent with the index of the exploration history
         pd.DataFrame(self.datas).to_csv(WORK_DIR+"/results.csv", index=False)        
     
     def load_history(self, design: dict, pragma_name: str) -> Dict[str, str]:
@@ -46,7 +55,7 @@ class Explorer():
         if warnings:
             try:
                 warning_analysis_prompt = compile_warning_analysis_prompt(warnings, self.pragma_names)
-                pragma_warnings = retrieve_dict_from_response(get_openai_response(warning_analysis_prompt))
+                pragma_warnings = retrieve_dict_from_response(get_openai_response(warning_analysis_prompt, f"Warning Analyzer at Iteration {self.i_iter}"))
             except Exception as e:
                 pass
         return pragma_warnings
@@ -72,16 +81,15 @@ class Explorer():
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
             for x in useful_history:
-
                 if is_timeout(x["result"]) or not is_valid(x["result"]):
                     candidates.append({**x, **self.get_info(x["design"])})
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
             random.shuffle(candidates)
-        if len(candidates) < NUM_BEST_DESIGNS: return list(map(lambda x: x["i_step"], candidates))
+        if len(candidates) <= NUM_BEST_DESIGNS: return list(map(lambda x: x["i_step"], candidates))
         if AUTO_BEST_DESIGN: return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
         try:
             prompt = compile_best_design_prompt(self.c_code, candidates)
-            response = get_openai_response(prompt, MODEL)
+            response = get_openai_response(prompt, f"Best Design Selector for {pragma_name} at Iteration {self.i_iter}", model=MODEL)
             return list(map(lambda x: candidates[x]["i_step"], retrieve_indices_from_response(response)))
         except Exception as e:
             if PRINT_WARNINGS: 
@@ -102,7 +110,7 @@ class Explorer():
         if AUTO_OPTIMIZER: return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
         try:
             update_prompt = compile_pragma_update_prompt(best_design, hls_results, pragma_name, self.c_code, all_options, pragma_type, warnings.get(pragma_name, []), explored_values, self.optimizer_reflections[pragma_name])
-            return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt, MODEL))]
+            return [(best_design, pragma_name, str(update.get(pragma_name))) for update in retrieve_list_from_response(get_openai_response(update_prompt, f"Pragma Optimizer for {pragma_name} at Iteration {self.i_iter}", model=MODEL))]
         except Exception as e:
             if PRINT_WARNINGS: 
                 traceback.print_exc()
@@ -114,7 +122,7 @@ class Explorer():
         if AUTO_ARBITRATOR: return random.sample(pragma_updates, NUM_CHOSENS)
         try:
             prompt = compile_arbitrator_prompt(self.c_code, pragma_updates)
-            return [pragma_updates[_idx] for _idx in retrieve_indices_from_response(get_openai_response(prompt, MODEL))]
+            return [pragma_updates[_idx] for _idx in retrieve_indices_from_response(get_openai_response(prompt, f"Arbitrator at Iteration {self.i_iter}", model=MODEL))]
         except Exception as e:
             if PRINT_WARNINGS: 
                 print(f"WARNING: Failed to retrieve best update, error: {e}")
@@ -132,6 +140,7 @@ class Explorer():
             prev_hls_results: Dict[str, str], prev_pragma_warnings: Dict[str, List[str]],
             curr_hls_results: Dict[str, str], curr_pragma_warnings: Dict[str, List[str]],
             prev_idx: int, curr_idx: int):
+        if self.i_steps <= 1: return "useful" # first step
         if not prev_hls_results or not curr_hls_results: return
         if AUTO_REFLECTION: 
             if is_timeout(curr_hls_results):
@@ -153,7 +162,7 @@ class Explorer():
         try:
             reflection_prompt = compile_pruning_reflection_prompt(prev_design, curr_design, 
                 prev_hls_results, curr_hls_results)
-            return get_openai_response(reflection_prompt, MODEL, temperature=0.2)
+            return get_openai_response(reflection_prompt, f"Reflection agnet at Iteration {self.i_iter}", model=MODEL, temperature=0.2)
             # reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
             #     prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
             # for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():

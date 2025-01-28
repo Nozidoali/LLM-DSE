@@ -1,6 +1,14 @@
 import os
+import argparse
 
-RESULT_DIR = "./exp_opt_arb_bes_2"
+parser = argparse.ArgumentParser(description='Plot the DSE results')
+parser.add_argument("result_dir", type=str, help="The directory containing the DSE results")
+
+args = parser.parse_args()
+
+RESULT_DIR = args.result_dir
+assert os.path.exists(RESULT_DIR), f"Result directory {RESULT_DIR} does not exist"
+
 MODE = "BEST_PERF"
 # MODE = "AGG_DATA"
 # MODE = "PLOT_DSE"

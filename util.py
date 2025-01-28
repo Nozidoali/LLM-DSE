@@ -127,7 +127,7 @@ def eval_design(work_dir: str, c_code: str, curr_design: dict, idx: int) -> Tupl
     print(f"INFO: havest after compilation {json.dumps(merlin_results, indent=2)}\n\t design: {json.dumps(curr_design, indent=2)}")
     return merlin_results, merlin_log
 
-def get_openai_response(prompt, model=GPT_MODEL, temperature=0.7) -> str:
+def get_openai_response(prompt, agent_name: str, model=GPT_MODEL, temperature=0.7) -> str:
     if model == GPT_MODEL:
         failed = True
         while failed:
@@ -145,7 +145,7 @@ def get_openai_response(prompt, model=GPT_MODEL, temperature=0.7) -> str:
             except:
                 failed = True
                 time.sleep(2)
-        open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
+        open(OPENAI_LOGFILE, "a").write("\n" + "=" * 80 + "\n" + agent_name + "\n" + prompt + "\n" + "-" * 80 + "\n" + response)
         return(response)
     elif model == DEEPSEEK_MODEL:
         client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
@@ -200,7 +200,7 @@ def compile_best_design_prompt(c_code: str, candidates: list) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(candidates))
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
-        *[f"{i}: " + format_example(x["design"], x["result"], [], x["reflection"]) + "The remaining search space is: " + str(x["remaining space"])
+        *[f"{i}: " + format_example(x["design"], x["result"], [], x["reflection"]) + " The remaining search space is: " + str(x["remaining space"])
           for i, x in enumerate(candidates)],
         *KNOWLEDGE_DATABASE['best_design'],
         f"Note that you are doing a design space exploration, and you must find the design that can be further optimized.",

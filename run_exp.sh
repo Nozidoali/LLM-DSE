@@ -1,12 +1,16 @@
 #!/bin/bash
 folder_path=./data/lad25
-result_path=./exp_opt_arb_bes_2
+result_path=./exp_opt_arb_besa_ref_3
+
+if [ ! -d "$result_path" ]; then
+    mkdir -p "$result_path"
+fi
 
 mode="run"
 # mode="harvest"
 
 work_dir=/scratch/hanyu
-date_str=20250121_205056  # for harvest
+date_str=20250127_135701  # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)
@@ -28,3 +32,13 @@ while IFS= read -r c_file; do
         fi
     fi
 done < <(find "$folder_path" -type f -name "*.c")
+
+if [ "$mode" == "run" ]; then
+    wait
+    echo "All done"
+fi
+
+
+if [ "$mode" == "harvest" ]; then
+    python3 plot_exp.py $result_path
+fi
