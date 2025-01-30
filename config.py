@@ -37,7 +37,7 @@ DATABASE_IS_VALID: bool = ENABLE_DATABASE_LOOKUP and os.path.exists(DATABASE_FIL
 # Debug mode
 DEBUG_MERLIN: bool = False # DONT CHANGE THIS UNLESS YOU ARE DEBUGGING MERLIN
 DEBUG_OPENAI: bool = False # If we use human response to debug
-AUTO_BEST_DESIGN: str = "BASE" # {"BASE": sort + valid + top 1, "HEU": sort + prune + tile + top k, "AGENT": use openai agent}
+AUTO_BEST_DESIGN: str = "AGENT" # {"BASE": sort + valid + top 1, "HEU": sort + prune + tile + top k, "AGENT": use openai agent}
 AUTO_OPTIMIZER: bool = False # Automatically optimize the design
 AUTO_REFLECTION: str = "BASE" # {"BASE": no reflection, "HEU": filter hisotry, "AGENT": use openai agent}
 AUTO_ARBITRATOR: bool = False # Automatically choose the best pragma
@@ -130,6 +130,11 @@ KNOWLEDGE_DATABASE = {
 		f"	(4) When the performances are similar, you should choose the design with more room for improvement.",
 		f"	(5) Besides all the metrics above, you should priority the design that has more remaining search spaces left).",
 		f"	(6) Don't choose useless design in the database."
+	],
+	'best_design_tile':[
+		f"Here is some information about the best design suitable for the tile pragma:",
+		f"	(1) Prioritize the design that has resource over utilization (>80%).",
+		f"	(2) If there are multiple design that over utilize the resource, prioritize the one with lower resources.",
 	],
 	'parallel': [
 		f"Here is some knowledge about the __PARA__LX pragma:",

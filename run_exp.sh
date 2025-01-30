@@ -1,21 +1,21 @@
 #!/bin/bash
 folder_path=./data/lad25
-result_path=./exp_opt_arb_besa_ref_3
+result_path=./exp_0129_heu
 
-if [ -d $result_path ]; then
-    echo "Result path $result_path already exists. Please remove it first."
-    exit 1
-fi
+# if [ -d $result_path ]; then
+#     echo "Result path $result_path already exists. Please remove it first."
+#     exit 1
+# fi
 
-if [ ! -d "$result_path" ]; then
-    mkdir -p "$result_path"
-fi
+# if [ ! -d "$result_path" ]; then
+#     mkdir -p "$result_path"
+# fi
 
-# mode="run"
-mode="harvest"
+mode="run"
+# mode="harvest"
 
 work_dir=/scratch/hanyu
-date_str=20250128_010029  # for harvest
+date_str=20250129_051435  # for harvest
 
 while IFS= read -r c_file; do
     base_name=$(basename "$c_file" .c)

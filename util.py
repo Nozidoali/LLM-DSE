@@ -196,8 +196,17 @@ def retrieve_index_from_response(response: str) -> int:
 def retrieve_indices_from_response(response: str) -> List[int]:
     return [int(x) for x in response.strip().split(",")]
 
-def compile_best_design_prompt(c_code: str, candidates: list) -> str:
+def compile_best_design_prompt(c_code: str, candidates: list, pragma_type: str) -> str:
     n_best_designs: int = min(NUM_BEST_DESIGNS, len(candidates))
+    if pragma_type == "tile":
+        return "\n".join([
+            f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
+            *[f"{i}: " + format_example(x["design"], x["result"], [])  + " The remaining search space is: " + str(x["remaining space"])
+              for i, x in enumerate(candidates)],
+            *KNOWLEDGE_DATABASE['best_design'],
+            f"Note that you are doing a design space exploration, and you must find the design that can be further optimized.",
+            REGULATE_OUTPUT("index list", len(candidates), n_best_designs),
+        ])
     return "\n".join([
         f"For the given C code\n ```c++ \n{c_code}\n```\n with some pragma placeholders for high-level synthesis (HLS), your task is to choose the top {n_best_designs} best designs among the following options.",
         *[f"{i}: " + format_example(x["design"], x["result"], [], x["reflection"]) + " The remaining search space is: " + str(x["remaining space"])

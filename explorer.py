@@ -50,6 +50,7 @@ class Explorer():
         
     def analyze_warnings(self, warnings: List[str]) -> Dict[str, List[str]]:
         pragma_warnings = {}
+        print(f"Warnings: {warnings}")
         if AUTO_WARNING_ANALYSIS:
             return {pragma_name: [_w for _w in warnings if get_loop_name(pragma_name) in _w] for pragma_name in self.pragma_names}
         if warnings:
@@ -84,14 +85,15 @@ class Explorer():
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
         else:
             for x in useful_history:
-                if is_timeout(x["result"]) or not is_valid(x["result"]):
+                if is_timeout(x["result"]): continue
+                if not is_valid(x["result"]):
                     candidates.append({**x, **self.get_info(x["design"])})
                 if len(candidates) >= NUM_BEST_DESIGN_CANIDATES: break
             random.shuffle(candidates)
         if len(candidates) <= NUM_BEST_DESIGNS: return list(map(lambda x: x["i_step"], candidates))
         if AUTO_BEST_DESIGN == "HEU": return list(map(lambda x: x["i_step"], candidates[:NUM_BEST_DESIGNS]))
         try:
-            prompt = compile_best_design_prompt(self.c_code, candidates)
+            prompt = compile_best_design_prompt(self.c_code, candidates, pragma_type)
             response = get_openai_response(prompt, f"Best Design Selector for {pragma_name} at Iteration {self.i_iter}", model=MODEL)
             return list(map(lambda x: candidates[x]["i_step"], retrieve_indices_from_response(response)))
         except Exception as e:
@@ -108,7 +110,8 @@ class Explorer():
         explored_values = self.load_history(best_design, pragma_name)
         all_options = [str(v) for v in self.ds_config[pragma_name] 
             if str(v) not in explored_values.keys() and str(v) != str(best_design[pragma_name])]
-        num_updates = NUM_OPTIMIZATIONS if pragma_type != "pipeline" else 1
+        num_updates = NUM_OPTIMIZATIONS 
+        # if pragma_type != "pipeline" else 1
         if len(all_options) <= num_updates: return[(best_design, pragma_name, str(v)) for v in all_options]
         if AUTO_OPTIMIZER: return [(best_design, pragma_name, str(v)) for v in all_options[:num_updates]]
         try:
@@ -166,15 +169,7 @@ class Explorer():
         try:
             reflection_prompt = compile_pruning_reflection_prompt(prev_design, curr_design, 
                 prev_hls_results, curr_hls_results)
-            return get_openai_response(reflection_prompt, f"Reflection agnet at Iteration {self.i_iter}", model=MODEL, temperature=0.2)
-            # reflection_prompt = compile_reflection_prompt(self.c_code, prev_design, curr_design, 
-            #     prev_hls_results, prev_pragma_warnings, curr_hls_results, curr_pragma_warnings, self.pragma_names)
-            # for pragma_name, reflections in retrieve_dict_from_response(get_openai_response(reflection_prompt)).items():
-            #     print(f"Reflections for {pragma_name}:\n\t" + "\n\t".join(reflections))
-            #     if pragma_name in self.optimizer_reflections:
-            #         self.optimizer_reflections[pragma_name].extend(reflections)
-            #         if len(self.optimizer_reflections[pragma_name]) > SELF_REFLECTION_LENGTH:
-            #             self.optimizer_reflections[pragma_name] = self.optimizer_reflections[pragma_name][-SELF_REFLECTION_LENGTH:]
+            return get_openai_response(reflection_prompt, f"Reflection agent at Iteration {self.i_iter}", model=MODEL, temperature=0.2)
         except Exception as e:
             if PRINT_WARNINGS: 
                 print(f"WARNING: Failed to retrieve reflections, error: {e}")
