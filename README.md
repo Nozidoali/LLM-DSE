@@ -1,6 +1,18 @@
 LLM-DSE
 =======
 
+```
+@misc{wang2025llmdsesearchingacceleratorparameters,
+      title={LLM-DSE: Searching Accelerator Parameters with LLM Agents}, 
+      author={Hanyu Wang and Xinrui Wu and Zijian Ding and Su Zheng and Chengyue Wang and Tony Nowatzki and Yizhou Sun and Jason Cong},
+      year={2025},
+      eprint={2505.12188},
+      archivePrefix={arXiv},
+      primaryClass={cs.AR},
+      url={https://arxiv.org/abs/2505.12188}, 
+}
+```
+
 Getting Started
 ---------------
 
