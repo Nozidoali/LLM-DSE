@@ -1,4 +1,3 @@
-import json, time
 from config import *
 from util import *
 from explorer import *
