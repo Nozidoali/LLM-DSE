@@ -1,6 +1,6 @@
 #!/bin/bash
 work_dir=/scratch/hanyu
-folder_path=./data/lad25
+folder_path=./data/pack1
 
 
 while IFS= read -r c_file; do
