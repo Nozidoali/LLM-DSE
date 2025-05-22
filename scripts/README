@@ -1,0 +1,11 @@
+Running experiments:
+
+First modify the `work_dir` attribute in both `run.sh` and `harvest.sh` to the directory where you want to store the results. Then run the following command:
+```bash
+./run.sh
+```
+
+After finishing the experiments, you can run the following command to harvest the results:
+```bash
+./harvest.sh
+```
